@@ -6,7 +6,7 @@ from math import gcd
 
 # Function to calculate the least common multiple
 def lcm(a, b):
-  return abs(a * b) // gcd(a, b)
+  return abs(a * b) // gcd(a, b) if a and b else max(a, b)
 
 # Function to simulate satellite tumbling
 def satellite_tumble(t, x_deg_per_sec, y_deg_per_sec, z_deg_per_sec):
@@ -14,12 +14,12 @@ def satellite_tumble(t, x_deg_per_sec, y_deg_per_sec, z_deg_per_sec):
   x_rad_per_sec = np.deg2rad(x_deg_per_sec)
   y_rad_per_sec = np.deg2rad(y_deg_per_sec)
   z_rad_per_sec = np.deg2rad(z_deg_per_sec)
-  
+
   # Calculate the rotation using simple harmonic motion
   x_rotation = np.sin(x_rad_per_sec * t)
   y_rotation = np.cos(y_rad_per_sec * t)
   z_rotation = np.sin(z_rad_per_sec * t) * np.cos(z_rad_per_sec * t)
-  
+
   return x_rotation, y_rotation, z_rotation
 
 if __name__ == '__main__':
@@ -40,14 +40,14 @@ if __name__ == '__main__':
   x_data, y_data, z_data = [], [], []
 
   # Rotation rates in degrees per second (as floats)
-  x_deg_per_sec = 30
-  y_deg_per_sec = 45
-  z_deg_per_sec = 60
+  x_deg_per_sec = 1
+  y_deg_per_sec = 1
+  z_deg_per_sec = 0
 
   # Calculate the time for a full rotation for each axis
-  x_full_rotation_time = 360.0 / x_deg_per_sec
-  y_full_rotation_time = 360.0 / y_deg_per_sec
-  z_full_rotation_time = 360.0 / z_deg_per_sec
+  x_full_rotation_time = 360.0 / x_deg_per_sec if x_deg_per_sec else 0
+  y_full_rotation_time = 360.0 / y_deg_per_sec if y_deg_per_sec else 0
+  z_full_rotation_time = 360.0 / z_deg_per_sec if z_deg_per_sec else 0
 
   # To calculate the LCM of floating-point numbers, scale them to integers
   scale_factor = 1000  # Scale factor to convert to integers
@@ -64,7 +64,7 @@ if __name__ == '__main__':
   print("LCM of full rotation times:", lcm_full_rotation_time)
   # Initialize the arrow
   arrow = None
-  
+
   # Update function for animation
   def update(frame):
     global arrow
@@ -72,31 +72,31 @@ if __name__ == '__main__':
     x_data.append(x)
     y_data.append(y)
     z_data.append(z)
-    
+
     # Update the path
     path.set_data(x_data, y_data)
     path.set_3d_properties(z_data)
-    
+
     # Remove the previous arrow
     if arrow:
       arrow.remove()
-    
+
     # Draw the new arrow
     arrow = ax.quiver(0, 0, 0, x, y, z, color='r', length=0.5)
-    
+
     # Reset the path data at the end of a full cycle
     if frame >= lcm_full_rotation_time:
       x_data.clear()
       y_data.clear()
       z_data.clear()
-    
+
     return path, arrow
 
   # Create the animation with more frames for smoother motion
   ani = FuncAnimation(fig, update, frames=np.linspace(0, lcm_full_rotation_time, 500), blit=False, interval=20)
 
   # Save the animation as a GIF
-  ani.save('satellite_tumble.gif', writer='pillow', fps=50)
+  #ani.save('satellite_tumble.gif', writer='pillow', fps=50)
 
   # Show the plot
   plt.show()
