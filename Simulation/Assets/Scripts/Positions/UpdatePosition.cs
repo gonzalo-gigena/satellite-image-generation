@@ -50,9 +50,12 @@ public class UpdatePosition : MonoBehaviour
                 // Randomize the camera's rotation for each shot
                 satelliteCameraScript.RandomizeCameraRotation();
 
+
                 // Take a screenshot (wait for end of frame to ensure proper rendering)
                 yield return StartCoroutine(satelliteCameraScript.CaptureScreenshot());
 
+                //Wait for 4 seconds
+                yield return new WaitForSeconds(1000);
                 // Optionally, yield return null to capture the next frame immediately
                 yield return null;
             }
