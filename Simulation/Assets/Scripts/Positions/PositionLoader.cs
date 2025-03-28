@@ -5,16 +5,18 @@ using Newtonsoft.Json;
 public class Positions
 {
     public int total { get; set; }
-    public List<string> dates { get; set; }
-    public List<List<double>> subsolar_points { get; set; }
-    public List<List<double>> sun_pos { get; set; }
+    public List<double> time_elapsed { get; set; }
+    public List<List<double>> subsolar_points { get; set; } // latitude and longitude
+    public List<List<double>> sun_pos { get; set; } // x, y, z coordinates
+    public List<double> starting_orientation { get; set; } // x, y, z degrees
     public List<Satellites> satellites { get; set; }
 }
 
 public class Satellites
 {
     public string name { get; set; }
-    public List<List<double>> pos { get; set; }
+    public List<List<double>> pos { get; set; } // x, y , z coordinates
+    public List<List<double>> rotations { get; set; } // x, y, z degrees
 }
 
 public class PositionLoader

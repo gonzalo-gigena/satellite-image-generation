@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -11,7 +10,7 @@ public class UpdatePosition : MonoBehaviour
     Positions positions;
     SatelliteCamera satelliteCameraScript;
     int index = 0;
-    int satellite_index = 0; // for now there is only one satellite 
+    int satellite_index = 0; // for now there is only one satellite
 
     void Start()
     {
@@ -43,22 +42,13 @@ public class UpdatePosition : MonoBehaviour
         {
             // Move to the next position of the planets
             SetPositions();
+            SetRotation();
 
-            // Take 5 screenshots for each position
-            for (int shotCount = 0; shotCount < 10; shotCount++)
-            {
-                // Randomize the camera's rotation for each shot
-                satelliteCameraScript.RandomizeCameraRotation();
+            // Take a screenshot (wait for end of frame to ensure proper rendering)
+            yield return StartCoroutine(satelliteCameraScript.CaptureScreenshot());
 
-
-                // Take a screenshot (wait for end of frame to ensure proper rendering)
-                yield return StartCoroutine(satelliteCameraScript.CaptureScreenshot());
-
-                //Wait for 4 seconds
-                yield return new WaitForSeconds(1000);
-                // Optionally, yield return null to capture the next frame immediately
-                yield return null;
-            }
+            // Optionally, yield return null to capture the next frame immediately
+            yield return null;
 
             // Increment the image index after all 5 screenshots are taken
             index++;
@@ -67,26 +57,9 @@ public class UpdatePosition : MonoBehaviour
         Debug.Log("Screenshot capture complete.");
     }
 
-    /*void Update()
-    {
-        // Check if the spacebar is pressed
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            NextPosition();
-        }
-    }
-
-    void NextPosition()
-    {
-        // All list inside the Positions object have the same length
-        index = (index + 1) % positions.total;
-        Debug.Log($"Position: {index}");
-        SetPositions();
-    }*/
-
     void SetPositions()
     {
-        string date = positions.dates[index];
+        double timeElapsed = positions.time_elapsed[index];
         List<double> subsolarPoint = positions.subsolar_points[index];
         List<double> sunPosition = positions.sun_pos[index];
 
@@ -98,7 +71,11 @@ public class UpdatePosition : MonoBehaviour
 
         sat.SetPosition(satPosition);
         //sat.LookAt(sun.GetBody());
-        sat.UpdateProperties(date, name, satPosition);
+        sat.UpdateProperties(timeElapsed, name, satPosition);
     }
 
+    void SetRotation(){
+        List<double> rotation = positions.satellites[satellite_index].rotations[index];
+        satelliteCameraScript.SetCameraRotation(rotation);
+    }
 }

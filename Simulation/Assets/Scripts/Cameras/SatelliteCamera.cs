@@ -1,5 +1,6 @@
 using UnityEngine;
 using System.IO;
+using System.Collections.Generic;
 using System.Collections;
 
 public class SatelliteCamera : MonoBehaviour
@@ -15,18 +16,13 @@ public class SatelliteCamera : MonoBehaviour
     }
 
     // Function to randomize the camera's rotation
-    public void RandomizeCameraRotation()
+    public void SetCameraRotation(List<double> rotation)
     {
         // Get the camera attached to the current GameObject (this script is attached to the camera)
         Camera camera = GetComponent<Camera>();
 
-        // Generate random angles for x, y, and z axes
-        float randomX = Random.Range(0f, 360f);
-        float randomY = Random.Range(0f, 360f);
-        float randomZ = Random.Range(0f, 360f);
-
         // Apply random rotation to the camera
-        camera.transform.rotation = Quaternion.Euler(randomX, randomY, randomZ);
+        camera.transform.rotation = Quaternion.Euler((float)rotation[0], (float)rotation[1], (float)rotation[2]);
     }
 
     void Start()
@@ -152,77 +148,12 @@ public class SatelliteCamera : MonoBehaviour
         return result;
     }
 
-
-    private IEnumerator CaptureScreenshot1()
-    {
-        yield return new WaitForEndOfFrame();
-
-        // Get the camera attached to the current GameObject (this script is attached to the camera)
-        Camera camera = GetComponent<Camera>();
-
-        // Render at a higher resolution (e.g., 1920x1920 or any resolution with more detail)
-        int highResWidth = 1920;
-        int highResHeight = 1920;
-        RenderTexture highResRenderTexture = new RenderTexture(highResWidth, highResHeight, 24);
-        RenderTexture.active = highResRenderTexture;
-
-        // Create a high-resolution Texture2D
-        Texture2D highResScreenshotTexture = new Texture2D(highResWidth, highResHeight, TextureFormat.RGB24, false);
-
-        // Capture the screen into the high-resolution RenderTexture
-        camera.targetTexture = highResRenderTexture;
-        camera.Render();
-
-        // Read pixels from the high-resolution RenderTexture into the Texture2D
-        highResScreenshotTexture.ReadPixels(new Rect(0, 0, highResWidth, highResHeight), 0, 0);
-        highResScreenshotTexture.Apply();
-
-        // Manually downscale the high-res image to 102x102
-        Texture2D lowResTexture = new Texture2D(102, 102, TextureFormat.RGB24, false);
-        Color[] pixels = highResScreenshotTexture.GetPixels(0, 0, highResWidth, highResHeight);
-        Color[] resizedPixels = new Color[102 * 102];
-
-        // Simple downscaling algorithm (you can improve this with bilinear or bicubic interpolation)
-        float ratioX = (float)highResWidth / 102;
-        float ratioY = (float)highResHeight / 102;
-        for (int y = 0; y < 102; y++)
-        {
-            for (int x = 0; x < 102; x++)
-            {
-                int newX = Mathf.FloorToInt(x * ratioX);
-                int newY = Mathf.FloorToInt(y * ratioY);
-                resizedPixels[y * 102 + x] = pixels[newY * highResWidth + newX];
-            }
-        }
-
-        lowResTexture.SetPixels(resizedPixels);
-        lowResTexture.Apply();
-
-        // Encode the downscaled texture to JPG with quality 93
-        byte[] screenshotData = lowResTexture.EncodeToJPG(93);
-
-        // Define the path and file name for saving the screenshot
-        string filePath = GenerateScreenshotPath();
-
-        // Save the encoded JPG to the file
-        File.WriteAllBytes(filePath, screenshotData);
-
-        // Clean up memory
-        camera.targetTexture = null;
-        RenderTexture.active = null;
-        Destroy(highResRenderTexture);
-        Destroy(highResScreenshotTexture);
-        Destroy(lowResTexture);
-
-        Debug.Log($"Screenshot taken and saved to: {filePath}");
-    }
-
     string GenerateScreenshotPath()
     {
         Quaternion quaternion = transform.rotation;
         string satRot = $"{quaternion.x},{quaternion.y},{quaternion.z},{quaternion.w}";
         string satPos = string.Join(",", satellite.originalPos);
-        string filePath = $"{screenshotFolder}/{satellite.name}_{satellite.date}_{satPos}_{satRot}.jpg";
+        string filePath = $"{screenshotFolder}/{satellite.name}_{satellite.time}_{satPos}_{satRot}.jpg";
 
         return filePath;
     }

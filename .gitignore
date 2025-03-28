@@ -11,6 +11,7 @@ __pycache__/
 
 SyntheticImages/
 CompressedImages/
+**/generated_positions.json
 
 
 # Distribution / packaging

@@ -77,14 +77,13 @@ if __name__ == '__main__':
   tumble = [0.03, 0.045, 0.06] # in degrees per second
 
   positions = {
-    'dates': [],
+    'time_elapsed': [],
     'subsolar_points': [],
     'sun_pos': [],
     'starting_orientation': starting_orientation,
     'satellites': [{
       'name': 'cubesat',
       'pos': [],
-      'time_elapsed': [],
       'rotations': []
     }]
   }
@@ -97,18 +96,18 @@ if __name__ == '__main__':
     for j in range(1, burst + 1):
       current_date = new_date + timedelta(seconds=j)
       sun_pos, subsolar_point, sat_pos = generate_position(current_date)
-      positions['dates'].append(current_date.strftime(DATE_FORMAT))
       positions['subsolar_points'].append(subsolar_point)
       positions['sun_pos'].append(sun_pos)
       positions['satellites'][0]['pos'].append(sat_pos)
 
       # Calculate rotation based on the time elapsed since the start of the year
       time_elapsed = (current_date - starting_date).total_seconds()
+      positions['time_elapsed'].append(time_elapsed)
+
       rotation = satellite_tumble(starting_orientation, tumble, time_elapsed)
       positions['satellites'][0]['rotations'].append(rotation)
-      positions['satellites'][0]['time_elapsed'].append(time_elapsed)
 
-  positions['total'] = len(positions['dates'])
+  positions['total'] = len(positions['time_elapsed'])
 
   with open('Simulation/Assets/Resources/generated_positions.json', 'w') as outfile:
     json.dump(positions, outfile, indent=2)

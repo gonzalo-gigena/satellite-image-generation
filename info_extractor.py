@@ -24,7 +24,7 @@ def jday(year, month, day, hour, minute, seconds):
 def search_tle_by_date(jd, year):
   jd_year_start = jday(year, 1, 1, 0, 0, 0)
   epoch_day = jd - jd_year_start
-  
+
   current_epoch_tle = float(f"{year % 100}{round(epoch_day, 8)}")
 
   file_tle = open("LTE.txt", 'r').read()
@@ -56,10 +56,10 @@ def sun_pos_from_sc(jd, sat_pos):
 
   r_sun = (1.00014 - 0.01671 * np.cos(m) - 0.000140 * np.cos(2 * m)) * AU
   u_v = np.array([np.cos(lam), np.cos(e) * np.sin(lam), np.sin(lam) * np.sin(e)])
-  
+
   sun_pos_i_earth = r_sun * u_v
   sun_pos_from_sc = sun_pos_i_earth - sat_pos
-  
+
   return sun_pos_from_sc.tolist()
 
 def node_sat(image_name):
@@ -83,11 +83,11 @@ def get_file_info(file_name):
   jd = jday(dt.year, dt.month, dt.day, dt.hour - 1.0, dt.minute, dt.second)
 
   line1, line2= search_tle_by_date(jd, dt.year)
-  
+
   pos, vel = sat_pos_and_vel(line1, line2, jd)
 
   sun_pos = sun_pos_from_sc(jd, pos)
-  
+
   node, sat = node_sat(file_name)
 
   return {

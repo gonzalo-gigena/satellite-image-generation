@@ -6,7 +6,7 @@ public class Satellite : Body
 {   
     public List<double> originalPos;
     public string name;
-    public string date;
+    public double time;
 
     // Start is called before the first frame update
     public Satellite(GameObject obj)
@@ -18,8 +18,8 @@ public class Satellite : Body
         body.transform.LookAt(obj.transform);
     }
 
-    public void UpdateProperties(string satDate, string satName, List<double> satPosition){
-        date = satDate;
+    public void UpdateProperties(double timeElapsed, string satName, List<double> satPosition){
+        time = timeElapsed;
         name = satName;
         originalPos = satPosition;
     }
