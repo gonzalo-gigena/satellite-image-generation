@@ -2,37 +2,78 @@ import json
 import ephem
 import argparse
 from random import uniform
-
+from pathlib import Path
 from datetime import datetime, timedelta, UTC
+from typing import Tuple, List
+
 from info_extractor import search_tle_by_date, sat_pos_and_vel, jday, sun_pos_from_sc
 
+# Constants
 DATE_FORMAT = '%d-%m-%Y %H:%M:%S.%f'
+OUTPUT_PATH = Path('Simulation/Assets/Resources/generated_positions.json')
+DEFAULT_START_DATE = "01-01-2023 00:00:00.000000"
 
-def parse_arguments():
-  # Create the argument parser
-  parser = argparse.ArgumentParser(description='Generae satellite positions for unity simulation')
+def parse_arguments() -> Tuple[int, datetime, int]:
+  """
+  Parse command line arguments.
+  
+  Returns:
+      Tuple containing burst rate, starting date, and time step in seconds.
+  """
+  parser = argparse.ArgumentParser(
+    description='Generate satellite positions for Unity simulation',
+    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+  )
 
-  parser.add_argument('--b', type=int, default=3, help='Burst rate after each step')
-  parser.add_argument('--starting_date', type=str, default=None, help='Starting date in format "DD-MM-YYYY HH:MM:SS.ffffff"')
-  parser.add_argument('--step', type=int, default=3600, help='Time step in seconds')
+  parser.add_argument(
+    '--burst', '-b', 
+    type=int, 
+    default=3, 
+    help='Burst rate after each step'
+  )
+  parser.add_argument(
+    '--starting_date', '-d',
+    type=str, 
+    default=None, 
+    help=f'Starting date in format "{DATE_FORMAT}"'
+  )
+  parser.add_argument(
+    '--step', '-s',
+    type=int, 
+    default=3600, 
+    help='Time step in seconds'
+  )
+  parser.add_argument(
+    '--output', '-o',
+    type=str, 
+    default=str(OUTPUT_PATH), 
+    help='Output JSON file path'
+  )
 
-  # Parse the arguments
   args = parser.parse_args()
 
-  # Use the current UTC time if no starting_date is provided
+  # Use the default start date if none provided
   if args.starting_date is None:
-    starting_date = datetime.strptime("01-01-2023 00:00:00.000000", DATE_FORMAT).replace(tzinfo=UTC)
+    starting_date = datetime.strptime(DEFAULT_START_DATE, DATE_FORMAT).replace(tzinfo=UTC)
   else:
     try:
       starting_date = datetime.strptime(args.starting_date, DATE_FORMAT).replace(tzinfo=UTC)
     except ValueError:
       parser.error(f"Invalid date format! Expected '{DATE_FORMAT}' but got '{args.starting_date}'")
 
-  return args.b, starting_date, args.step
+  return args.burst, starting_date, args.step, args.output
 
-def subsolar_point_at_utc(utc_datetime):
-  # Initialize an observer location (use a central point on Earth)
-  # Create an observer object at the center of the Earth
+
+def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
+  """
+  Calculate the subsolar point (latitude and longitude) at a given UTC time.
+  
+  Args:
+      utc_datetime: The UTC datetime for calculation
+      
+  Returns:
+      Tuple of (latitude, longitude) in degrees
+  """
   observer = ephem.Observer()
   observer.lat, observer.lon = '0', '0'
   observer.date = utc_datetime
@@ -49,7 +90,16 @@ def subsolar_point_at_utc(utc_datetime):
 
   return subsolar_lat_deg, subsolar_lon_deg
 
-def generate_position(dt):
+def generate_position(dt: datetime) -> Tuple[List[float], Tuple[float, float], List[float]]:
+  """
+  Generate satellite and sun positions for a given datetime.
+  
+  Args:
+      dt: The datetime for calculation
+      
+  Returns:
+      Tuple containing (sun position, subsolar point, satellite position)
+  """
   jd = jday(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
   line1, line2= search_tle_by_date(jd, dt.year)
@@ -62,7 +112,18 @@ def generate_position(dt):
 
   return sun_pos, subsolar_point, pos
 
-def satellite_tumble(starting_orientation, tumble, time_elapsed):
+def satellite_tumble(starting_orientation: List[float], tumble: List[float], time_elapsed: float) -> List[float]:
+  """
+  Calculate satellite orientation based on initial orientation, tumble rates, and elapsed time.
+  
+  Args:
+      starting_orientation: Initial orientation angles [x, y, z] in degrees
+      tumble: Tumble rates [x, y, z] in degrees per second
+      time_elapsed: Time elapsed in seconds since simulation start
+      
+  Returns:
+      List of rotation angles [x, y, z] in degrees
+  """
   # Calculate the new orientation
   new_orientation = [
     (starting_orientation[i] + tumble[i] * time_elapsed) % 360
@@ -71,43 +132,56 @@ def satellite_tumble(starting_orientation, tumble, time_elapsed):
   return new_orientation
 
 if __name__ == '__main__':
-  burst, starting_date, step = parse_arguments()
-
-  starting_orientation = [uniform(0.0, 360.0), uniform(.0, 360.0), uniform(0.0, 360.0)]
-  tumble = [0.03, 0.045, 0.06] # in degrees per second
+  burst, starting_date, step, output_path = parse_arguments()
 
   positions = {
     'time_elapsed': [],
     'subsolar_points': [],
     'sun_pos': [],
-    'starting_orientation': starting_orientation,
     'satellites': [{
       'name': 'cubesat',
+      'burst': burst,
       'pos': [],
       'rotations': []
     }]
   }
 
-  new_date = starting_date
+  # Set the end date to the end of the year
+  end_date = datetime(starting_date.year + 1, 1, 1, tzinfo=UTC) - timedelta(seconds=1)
+  
+  # Initialize counters
   i = 0
-  while new_date.year == starting_date.year:
-    new_date = starting_date + timedelta(seconds=i*step)
-    i+=1
-    for j in range(1, burst + 1):
-      current_date = new_date + timedelta(seconds=j)
-      sun_pos, subsolar_point, sat_pos = generate_position(current_date)
-      positions['subsolar_points'].append(subsolar_point)
-      positions['sun_pos'].append(sun_pos)
-      positions['satellites'][0]['pos'].append(sat_pos)
+  
+  # Main simulation loop
+  current_date = starting_date
+  while current_date <= end_date:
+    # Calculate sarting orientation and tubmble
+    starting_orientation = [uniform(0.0, 360.0) for _ in range(3)]
+    tumble = [uniform(0.0, 1.0) for _ in range(3)] # in degrees per second
+    
+    # Generate position data
+    sun_pos, subsolar_point, sat_pos = generate_position(current_date)
+    
+    # Calculate time elapsed for rotation
+    time_elapsed = (current_date - starting_date).total_seconds()
+    
+    # Update data structure
+    positions['time_elapsed'].append(time_elapsed)
+    positions['subsolar_points'].append(subsolar_point)
+    positions['sun_pos'].append(sun_pos)
+    positions['satellites'][0]['pos'].append(sat_pos)
 
-      # Calculate rotation based on the time elapsed since the start of the year
-      time_elapsed = (current_date - starting_date).total_seconds()
-      positions['time_elapsed'].append(time_elapsed)
-
-      rotation = satellite_tumble(starting_orientation, tumble, time_elapsed)
+    # Generate positions for each burst point
+    for j in range(burst):
+      # Generate rotation
+      rotation = satellite_tumble(starting_orientation, tumble, time_elapsed + j)
+      
       positions['satellites'][0]['rotations'].append(rotation)
+        
+    i+=1
+    current_date = starting_date + timedelta(seconds=i*step)
 
-  positions['total'] = len(positions['time_elapsed'])
+  positions['total'] = i + 1
 
-  with open('Simulation/Assets/Resources/generated_positions.json', 'w') as outfile:
+  with open(output_path, 'w') as outfile:
     json.dump(positions, outfile, indent=2)
