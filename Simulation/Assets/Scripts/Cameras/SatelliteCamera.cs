@@ -5,14 +5,14 @@ using System.Collections;
 
 public class SatelliteCamera : MonoBehaviour
 {
-    Satellite satellite;
+    Satellite sat;
 
     string screenshotFolder = Path.Combine(Application.dataPath, "../../SyntheticImages");
     public float lookSpeed = 10f;  // Speed of looking around
 
-    public void SetReferences(Satellite sat)
+    public void SetReferences(Satellite satellite)
     {
-        satellite = sat;
+        sat = satellite;
     }
 
     // Function to randomize the camera's rotation
@@ -36,7 +36,7 @@ public class SatelliteCamera : MonoBehaviour
 
     void LateUpdate()
     {
-        GameObject satBody = satellite.GetBody();
+        GameObject satBody = sat.GetBody();
 
         if (transform.position != satBody.transform.position)
         {
@@ -152,8 +152,17 @@ public class SatelliteCamera : MonoBehaviour
     {
         Quaternion quaternion = transform.rotation;
         string satRot = $"{quaternion.x},{quaternion.y},{quaternion.z},{quaternion.w}";
-        string satPos = string.Join(",", satellite.originalPos);
-        string filePath = $"{screenshotFolder}/{satellite.name}_{satellite.time}_{satPos}_{satRot}.jpg";
+        string satPos = string.Join(",", sat.position);
+        /*
+        cubesat_pos0001_set00_photo0_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        cubesat_pos0001_set00_photo1_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        cubesat_pos0001_set00_photo2_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        cubesat_pos0001_set01_photo0_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        cubesat_pos0001_set01_photo1_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        cubesat_pos0001_set01_photo2_12345_1.2,3.4,5.6_0.1,0.2,0.3,0.9.jpg
+        */
+
+        string filePath = $"{screenshotFolder}/{sat.name}_{sat.index}_{sat.numBurst}_{sat.burstIndex}_{sat.time}_{satPos}_{satRot}.jpg";
 
         return filePath;
     }

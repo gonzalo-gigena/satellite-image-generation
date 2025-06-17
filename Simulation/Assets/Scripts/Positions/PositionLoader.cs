@@ -9,6 +9,8 @@ public class Positions
     public List<List<double>> subsolar_points { get; set; } // latitude and longitude
     public List<List<double>> sun_pos { get; set; } // x, y, z coordinates
     public List<double> starting_orientation { get; set; } // x, y, z degrees
+    public int num_burst { get; set; } // number of rotations per position.
+    public int burst { get; set; } // number of rotations per position.
     public List<Satellites> satellites { get; set; }
 }
 
@@ -16,7 +18,7 @@ public class Satellites
 {
     public string name { get; set; }
     public List<List<double>> pos { get; set; } // x, y , z coordinates
-    public List<List<double>> rotations { get; set; } // x, y, z degrees
+    public List<List<List<double>>> rotations { get; set; } // x, y, z degrees
 }
 
 public class PositionLoader
