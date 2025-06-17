@@ -189,8 +189,7 @@ if __name__ == '__main__':
     i += 1
     positions['satellites'][0]['rotations'].append(rotations)
     current_date = starting_date + timedelta(seconds=i*step)
-    if i > 1000:
-      break
+
   positions['total'] = i
 
   with open(output_path, 'w') as outfile:
