@@ -10,7 +10,7 @@ public class Positions
     public List<List<double>> sun_pos { get; set; } // x, y, z coordinates
     public List<double> starting_orientation { get; set; } // x, y, z degrees
     public int num_burst { get; set; } // number of rotations per position.
-    public int burst { get; set; } // number of rotations per position.
+    public int frames { get; set; } // number of rotations per position.
     public List<Satellites> satellites { get; set; }
 }
 

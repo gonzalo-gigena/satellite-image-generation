@@ -26,10 +26,10 @@ def parse_arguments() -> Tuple[int, datetime, int]:
   )
 
   parser.add_argument(
-    '--burst', '-b',
+    '--frames', '-f',
     type=int,
     default=3,
-    help='Burst rate after each step'
+    help='Number of frames per burst'
   )
   parser.add_argument(
     '--num_bursts', '-n',
@@ -67,7 +67,7 @@ def parse_arguments() -> Tuple[int, datetime, int]:
     except ValueError:
       parser.error(f"Invalid date format! Expected '{DATE_FORMAT}' but got '{args.starting_date}'")
 
-  return args.burst, starting_date, args.step, args.output, args.num_bursts
+  return args.frames, starting_date, args.step, args.output, args.num_bursts
 
 
 def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
@@ -138,13 +138,13 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
   return new_orientation
 
 if __name__ == '__main__':
-  burst, starting_date, step, output_path, num_bursts = parse_arguments()
+  frames, starting_date, step, output_path, num_bursts = parse_arguments()
 
   positions = {
     'time_elapsed': [],
     'subsolar_points': [],
     'sun_pos': [],
-    'burst': burst,
+    'frames': frames,
     'num_burst': num_bursts,
     'satellites': [{
       'name': 'cubesat',
@@ -158,7 +158,7 @@ if __name__ == '__main__':
 
   # Initialize counters
   i = 0
-
+  print(end_date)
   # Main simulation loop
   current_date = starting_date
   while current_date <= end_date:
@@ -181,7 +181,7 @@ if __name__ == '__main__':
       tumble = [uniform(0.0, 1.0) for _ in range(3)] # in degrees per second
 
       # Generate positions for each burst point
-      for k in range(burst):
+      for k in range(frames):
         # Generate rotation
         rotation = satellite_tumble(starting_orientation, tumble, time_elapsed + k)
         rotations.append(rotation)

@@ -43,7 +43,7 @@ public class UpdatePosition : MonoBehaviour
             SetPositions(i);
             for (int j = 0; j < positions.num_burst; j++)
             {
-                for (int k = 0; k < positions.burst; k++)
+                for (int k = 0; k < positions.frames; k++)
                 {
                     SetRotation(i, j, k);
                     UpdateSatProperties(i, j, k);
@@ -59,12 +59,12 @@ public class UpdatePosition : MonoBehaviour
         Debug.Log("Screenshot capture complete.");
     }
 
-    void UpdateSatProperties(int index, int numBurst, int burstIndex)
+    void UpdateSatProperties(int index, int burstIndex, int frameIndex)
     {
-        double timeElapsed = positions.time_elapsed[index] + burstIndex;
+        double timeElapsed = positions.time_elapsed[index] + frameIndex;
         string name = positions.satellites[satellite_index].name;
         List<double> satPosition = positions.satellites[satellite_index].pos[index];
-        sat.UpdateProperties(timeElapsed, name, satPosition, index, numBurst, burstIndex);
+        sat.UpdateProperties(timeElapsed, name, satPosition, index, burstIndex, frameIndex);
     }
 
     void SetPositions(int index)
@@ -80,8 +80,9 @@ public class UpdatePosition : MonoBehaviour
         //sat.LookAt(sun.GetBody());
     }
 
-    void SetRotation(int index, int numBurst, int burstIndex){
-        int rotationIndex = numBurst * positions.burst + burstIndex;
+    void SetRotation(int index, int burstIndex, int frameIndex)
+    {
+        int rotationIndex = burstIndex * positions.frames + frameIndex;
         List<double> rotation = positions.satellites[satellite_index].rotations[index][rotationIndex];
         satelliteCameraScript.SetCameraRotation(rotation);
     }
