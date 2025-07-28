@@ -2,6 +2,7 @@ using UnityEngine;
 using System.IO;
 using System.Collections.Generic;
 using System.Collections;
+using UnityEditor.UI;
 
 public class SatelliteCamera : MonoBehaviour
 {
@@ -10,8 +11,12 @@ public class SatelliteCamera : MonoBehaviour
     string screenshotFolder = Path.Combine(Application.dataPath, "../../SyntheticImages");
     public float lookSpeed = 10f;  // Speed of looking around
 
-    public void SetReferences(Satellite satellite)
+    int width, height;
+
+    public void SetReferences(Satellite satellite, int image_height, int image_width)
     {
+        height = image_height;
+        width = image_width;
         sat = satellite;
     }
 
@@ -81,7 +86,7 @@ public class SatelliteCamera : MonoBehaviour
         highResScreenshotTexture.Apply();
 
         // Downsample the image using bilinear interpolation
-        Texture2D lowResTexture = DownsampleBilinear(highResScreenshotTexture, 102, 102);
+        Texture2D lowResTexture = DownsampleBilinear(highResScreenshotTexture, height , width);
 
         // Encode the downscaled texture to JPG with quality 93
         byte[] screenshotData = lowResTexture.EncodeToJPG(93);
@@ -103,7 +108,7 @@ public class SatelliteCamera : MonoBehaviour
     }
 
     // Bilinear interpolation downsampling function
-    private Texture2D DownsampleBilinear(Texture2D source, int targetWidth, int targetHeight)
+    private Texture2D DownsampleBilinear(Texture2D source, int targetHeight, int targetWidth)
     {
         Texture2D result = new Texture2D(targetWidth, targetHeight, TextureFormat.RGB24, false);
 

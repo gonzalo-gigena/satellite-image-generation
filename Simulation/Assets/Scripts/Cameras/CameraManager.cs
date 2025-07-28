@@ -2,30 +2,68 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-public class FlareManager : MonoBehaviour
+public class CameraManager : MonoBehaviour
 {
+    List<Camera> cameras;
     GameObject sunLight;
     LensFlareComponentSRP lensFlareSRP;
+    int currentCam = 0;
 
     // Start is called before the first frame update
     void Start()
     {
         sunLight = GameObject.FindGameObjectWithTag("Sun Light");
         lensFlareSRP = sunLight.GetComponent<LensFlareComponentSRP>();
+
+        cameras = GetCameras();
+        NextCamera();
+    }
+    List<Camera> GetCameras()
+    {
+        List<Camera> cameras = new List<Camera>();
+        foreach (Transform child in transform)
+        {
+            Camera cameraComponent = child.gameObject.GetComponent<Camera>();
+            if (cameraComponent != null)
+            {
+                cameras.Add(cameraComponent);
+            }
+        }
+        return cameras;
+    }
+
+    void NextCamera()
+    {
+        cameras[currentCam].gameObject.SetActive(true);
+        for (var i = 0; i < cameras.Count; i++)
+        {
+            if (i != currentCam)
+            {
+                cameras[i].gameObject.SetActive(false);
+            }
+        }
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            currentCam = (currentCam + 1) % cameras.Count;
+            NextCamera();
+        }
+        else if (Input.GetKeyDown(KeyCode.LeftArrow))
+        {
+            currentCam = (currentCam - 1 + cameras.Count) % cameras.Count;
+            NextCamera();
+        }
         // Check if the sun can be seen, if not disable flare.
         EnableFlareSRP();
     }
 
     void EnableFlareSRP()
     {
-        // Get the camera attached to the current GameObject (this script is attached to the camera)
-        Camera camera = GetComponent<Camera>();
-        lensFlareSRP.enabled = IsObjectInView(sunLight, camera);
+        lensFlareSRP.enabled = IsObjectInView(sunLight, cameras[currentCam]);
     }
 
     public static bool IsObjectInView(GameObject obj, Camera cam)
@@ -34,9 +72,9 @@ public class FlareManager : MonoBehaviour
         Vector3 viewportPoint = cam.WorldToViewportPoint(obj.transform.position);
 
         // Check if the viewport point is within the camera's view frustum
-        bool isInViewport = viewportPoint.x >= -0.5 && viewportPoint.x <= 1.5 &&
-                            viewportPoint.y >= -0.5 && viewportPoint.y <= 1.5 &&
-                            viewportPoint.z > 0;
+        bool isInViewport = viewportPoint.x >= -1 && viewportPoint.x <= 1 &&
+                            viewportPoint.y >= -1 && viewportPoint.y <= 1 &&
+                            viewportPoint.z > -1;
 
         if (!isInViewport)
             return false;

@@ -11,63 +11,82 @@ from info_extractor import search_tle_by_date, sat_pos_and_vel, jday, sun_pos_fr
 # Constants
 DATE_FORMAT = '%d-%m-%Y %H:%M:%S.%f'
 OUTPUT_PATH = Path('Simulation/Assets/Resources/generated_positions.json')
-DEFAULT_START_DATE = "01-01-2023 00:00:00.000000"
 
-def parse_arguments() -> Tuple[int, datetime, int]:
+def get_default_start_date(year):
+  return f'01-01-{year} 00:00:00.000000'
+
+def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str]:
   """
   Parse command line arguments.
 
   Returns:
-      Tuple containing burst rate, starting date, and time step in seconds.
+      Tuple containing burst rate, starting date, time step in seconds,
+      output path, number of bursts, image width, image height, and mode.
   """
   parser = argparse.ArgumentParser(
-    description='Generate satellite positions for Unity simulation',
-    formatter_class=argparse.ArgumentDefaultsHelpFormatter
+      description='Generate satellite positions for Unity simulation',
+      formatter_class=argparse.ArgumentDefaultsHelpFormatter
   )
 
   parser.add_argument(
-    '--frames', '-f',
-    type=int,
-    default=3,
-    help='Number of frames per burst'
+      '--frames', '-f',
+      type=int,
+      default=3,
+      help='Number of frames per burst'
   )
   parser.add_argument(
-    '--num_bursts', '-n',
-    type=int,
-    default=2,
-    help='Number of bursts per step'
+      '--num_bursts', '-n',
+      type=int,
+      default=2,
+      help='Number of bursts per step'
   )
   parser.add_argument(
-    '--starting_date', '-d',
-    type=str,
-    default=None,
-    help=f'Starting date in format "{DATE_FORMAT}"'
+      '--year', '-y',
+      type=int,
+      default=2024,
+      help='Year'
   )
   parser.add_argument(
-    '--step', '-s',
-    type=int,
-    default=3600,
-    help='Time step in seconds'
+      '--step', '-s',
+      type=int,
+      default=3600,
+      help='Time step in seconds'
   )
   parser.add_argument(
-    '--output', '-o',
-    type=str,
-    default=str(OUTPUT_PATH),
-    help='Output JSON file path'
+      '--output', '-o',
+      type=str,
+      default=str(OUTPUT_PATH),
+      help='Output JSON file path'
+  )
+  parser.add_argument(
+      '--image_width', '-iw',
+      type=int,
+      default=102,
+      help='Width of the image'
+  )
+  parser.add_argument(
+      '--image_height', '-ih',
+      type=int,
+      default=102,
+      help='Height of the image'
+  )
+  parser.add_argument(
+      '--mode', '-m',
+      type=str,
+      choices=['debug', 'generate'],
+      default='debug',
+      help='Mode of operation'
   )
 
   args = parser.parse_args()
 
   # Use the default start date if none provided
-  if args.starting_date is None:
-    starting_date = datetime.strptime(DEFAULT_START_DATE, DATE_FORMAT).replace(tzinfo=UTC)
+  if args.year is None:
+    starting_date = datetime.strptime(get_default_start_date(2024), DATE_FORMAT).replace(tzinfo=UTC)
   else:
-    try:
-      starting_date = datetime.strptime(args.starting_date, DATE_FORMAT).replace(tzinfo=UTC)
-    except ValueError:
-      parser.error(f"Invalid date format! Expected '{DATE_FORMAT}' but got '{args.starting_date}'")
+    starting_date = datetime.strptime(get_default_start_date(args.year), DATE_FORMAT).replace(tzinfo=UTC)
 
-  return args.frames, starting_date, args.step, args.output, args.num_bursts
+  return args.frames, starting_date, args.step, args.output, args.num_bursts, args.image_width, args.image_height, args.mode
 
 
 def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
@@ -138,9 +157,12 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
   return new_orientation
 
 if __name__ == '__main__':
-  frames, starting_date, step, output_path, num_bursts = parse_arguments()
+  frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode = parse_arguments()
 
   positions = {
+    'mode': mode,
+    'image_width': image_width,
+    'image_height': image_height,
     'time_elapsed': [],
     'subsolar_points': [],
     'sun_pos': [],
@@ -158,7 +180,6 @@ if __name__ == '__main__':
 
   # Initialize counters
   i = 0
-  print(end_date)
   # Main simulation loop
   current_date = starting_date
   while current_date <= end_date:

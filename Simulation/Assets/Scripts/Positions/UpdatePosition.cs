@@ -10,6 +10,7 @@ public class UpdatePosition : MonoBehaviour
     Positions positions;
     SatelliteCamera satelliteCameraScript;
     int satellite_index = 0; // for now there is only one satellite
+    int i, j, k = 0;
 
     void Start()
     {
@@ -29,9 +30,20 @@ public class UpdatePosition : MonoBehaviour
         // Pass reference to satellite camera
         GameObject satelliteCamera = GameObject.Find("SatelliteCamera");
         satelliteCameraScript = satelliteCamera.GetComponent<SatelliteCamera>();
-        satelliteCameraScript.SetReferences(sat);
+        int image_height = positions.image_height;
+        int image_width = positions.image_width;
+        satelliteCameraScript.SetReferences(sat, image_height, image_width);
 
-        StartCoroutine(CaptureScreenshotsContinuously());
+
+        string mode = positions.mode;
+        if (mode.Equals("debug"))
+        {
+            NextPosition();
+        }
+        else if (mode.Equals("generate"))
+        {
+            StartCoroutine(CaptureScreenshotsContinuously());
+        }
     }
 
     // Coroutine to capture screenshots continuously
@@ -57,6 +69,25 @@ public class UpdatePosition : MonoBehaviour
             }
         }
         Debug.Log("Screenshot capture complete.");
+    }
+
+    void Update()
+    {
+        // Check if the spacebar is pressed
+        if (Input.GetKeyDown(KeyCode.Space))
+        {
+            // All list inside the Positions object have the same length
+            i = (i + 1) % positions.total;
+            NextPosition();
+        }
+    }
+
+    void NextPosition()
+    {
+        // goes to the next position not photo.
+        SetPositions(i);
+        SetRotation(i, j, k);
+        UpdateSatProperties(i, j, k);
     }
 
     void UpdateSatProperties(int index, int burstIndex, int frameIndex)

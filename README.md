@@ -5,29 +5,40 @@ This project consists of two Python scripts, `info_extractor.py` and `positions_
 ### Usage
 
 1. Ensure the TLE data file `LTE.txt` is in the same directory as the scripts.
-2. To generate satellite positions (e.g., 5000 positions), run the script with the following command:
+2. To generate satellite positions, run the script with parameters:
    ```sh
-   postions_generator.py --n 1000 --starting_date "18-06-2024 00:00:00.000000" --step 51
+   python positions_generator.py --year 2024 --step 3600 --frames 3 --num_bursts 2 --image_width 102 --image_height 102 --mode generate
    ```
-3. The script will create a `generated_positions.json` file inside the Unity project directory.
-4. Open Unity and load the project.
-5. Press "Play" to generate the images. Image generation time depends on your hardware.
+   - `--year`: Starting year (default: 2024)
+   - `--step`: Time step in seconds (default: 3600)
+   - `--frames`: Frames per burst (default: 3)
+   - `--num_bursts`: Bursts per position (default: 2)
+   - `--image_width`: Image width in pixels (default: 102)
+   - `--image_height`: Image height in pixels (default: 102)
+   - `--mode`: Operation mode: 'debug' or 'generate' (default: 'debug')
+   - `--output`: Output JSON path (default: `Simulation/Assets/Resources/generated_positions.json`)
+3. **Important**: Set `--mode generate` to automatically start image generation in Unity
+4. The script will create a `generated_positions.json` file
+5. Open Unity and load the project
+6. Press "Play" to generate images (only in 'generate' mode)
 
-## File name
+## File Naming Convention
 
-This line of C# code is creating a file path for saving a screenshot with a dynamically generated name:
+The image file names follow this pattern:
 
 ```csharp
-string filePath = $"{screenshotFolder}/{satellite.name}_{satellite.date}_{satPos}_{satRot}.jpg";
+string filePath = $"{screenshotFolder}/{sat.name}_{sat.index}_{sat.numBurst}_{sat.burstIndex}_{sat.time}_{satPos}_{satRot}.jpg";
 ```
 
-1. **`{satellite.name}`**: This inserts the `name` of the `satellite`. For example, in this case `"cubesat"`.
+This naming convention includes the following components:
 
-2. **`{satellite.date}`**: Represents the date and time the image was captured.
-
-3. **`{satPos}`**: This inserts the current position of the satellite (`satPos`) to represent the satellite's coordinates (X, Y, Z).
-
-4. **`{satRot}`**: This inserts the current rotation of the satellite (`satRot`), in quaternion form, e.g., `"0.4703567,-0.01855032,0.8145117,0.3391037"`.
+1. **`{sat.name}`**: Name of the satellite (e.g., "cubesat")
+2. **`{sat.index}`**: Position index in the capture sequence (0-9 for 10 positions)
+3. **`{sat.numBurst}`**: Burst index within a position (0-4 for 5 bursts/position)
+4. **`{sat.burstIndex}`**: Frame index within a burst (0-2 for 3 frames/burst)
+5. **`{sat.time}`**: Seconds since year start (replaces dates for yearly consistency)
+6. **`{satPos}`**: Satellite position in spatial coordinates (X, Y, Z)
+7. **`{satRot}`**: Satellite rotation as quaternion values
 
 
 This dynamically generated name helps ensure that each screenshot is unique based on the satellite's properties and the current date and time.
