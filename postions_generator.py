@@ -1,19 +1,23 @@
-import json
-import ephem
 import argparse
-from random import uniform
+import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from datetime import datetime, timedelta, UTC
-from typing import Tuple, List
+from random import uniform
+from typing import List, Tuple
 
-from info_extractor import search_tle_by_date, sat_pos_and_vel, jday, sun_pos_from_sc
+import ephem
+
+from info_extractor import (jday, sat_pos_and_vel, search_tle_by_date,
+                            sun_pos_from_sc)
 
 # Constants
 DATE_FORMAT = '%d-%m-%Y %H:%M:%S.%f'
 OUTPUT_PATH = Path('Simulation/Assets/Resources/generated_positions.json')
 
+
 def get_default_start_date(year):
   return f'01-01-{year} 00:00:00.000000'
+
 
 def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str]:
   """
@@ -115,6 +119,7 @@ def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
 
   return subsolar_lat_deg, subsolar_lon_deg
 
+
 def generate_position(dt: datetime) -> Tuple[List[float], Tuple[float, float], List[float]]:
   """
   Generate satellite and sun positions for a given datetime.
@@ -127,7 +132,7 @@ def generate_position(dt: datetime) -> Tuple[List[float], Tuple[float, float], L
   """
   jd = jday(dt.year, dt.month, dt.day, dt.hour, dt.minute, dt.second)
 
-  line1, line2= search_tle_by_date(jd, dt.year)
+  line1, line2 = search_tle_by_date(jd, dt.year)
 
   pos, _ = sat_pos_and_vel(line1, line2, jd)
 
@@ -136,6 +141,7 @@ def generate_position(dt: datetime) -> Tuple[List[float], Tuple[float, float], L
   subsolar_point = subsolar_point_at_utc(dt)
 
   return sun_pos, subsolar_point, pos
+
 
 def satellite_tumble(starting_orientation: List[float], tumble: List[float], time_elapsed: float) -> List[float]:
   """
@@ -151,28 +157,29 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
   """
   # Calculate the new orientation
   new_orientation = [
-    (starting_orientation[i] + tumble[i] * time_elapsed) % 360
-    for i in range(3)
+      (starting_orientation[i] + tumble[i] * time_elapsed) % 360
+      for i in range(3)
   ]
   return new_orientation
+
 
 if __name__ == '__main__':
   frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode = parse_arguments()
 
   positions = {
-    'mode': mode,
-    'image_width': image_width,
-    'image_height': image_height,
-    'time_elapsed': [],
-    'subsolar_points': [],
-    'sun_pos': [],
-    'frames': frames,
-    'num_burst': num_bursts,
-    'satellites': [{
-      'name': 'cubesat',
-      'pos': [],
-      'rotations': []
-    }]
+      'mode': mode,
+      'image_width': image_width,
+      'image_height': image_height,
+      'time_elapsed': [],
+      'subsolar_points': [],
+      'sun_pos': [],
+      'frames': frames,
+      'num_burst': num_bursts,
+      'satellites': [{
+          'name': 'cubesat',
+          'pos': [],
+          'rotations': []
+      }]
   }
 
   # Set the end date to the end of the year
@@ -199,7 +206,7 @@ if __name__ == '__main__':
     for j in range(num_bursts):
       # Calculate sarting orientation and tubmble
       starting_orientation = [uniform(0.0, 360.0) for _ in range(3)]
-      tumble = [uniform(0.0, 1.0) for _ in range(3)] # in degrees per second
+      tumble = [uniform(0.0, 1.0) for _ in range(3)]  # in degrees per second
 
       # Generate positions for each burst point
       for k in range(frames):
@@ -209,7 +216,7 @@ if __name__ == '__main__':
 
     i += 1
     positions['satellites'][0]['rotations'].append(rotations)
-    current_date = starting_date + timedelta(seconds=i*step)
+    current_date = starting_date + timedelta(seconds=i * step)
 
   positions['total'] = i
 

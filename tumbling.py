@@ -1,14 +1,18 @@
-import numpy as np
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib.animation import FuncAnimation
 from math import gcd
 
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.animation import FuncAnimation
+
 # Function to calculate the least common multiple
+
+
 def lcm(a, b):
   return abs(a * b) // gcd(a, b) if a and b else max(a, b)
 
 # Function to simulate satellite tumbling
+
+
 def satellite_tumble(t, x_deg_per_sec, y_deg_per_sec, z_deg_per_sec):
   # Convert degrees per second to radians per second
   x_rad_per_sec = np.deg2rad(x_deg_per_sec)
@@ -21,6 +25,7 @@ def satellite_tumble(t, x_deg_per_sec, y_deg_per_sec, z_deg_per_sec):
   z_rotation = np.sin(z_rad_per_sec * t) * np.cos(z_rad_per_sec * t)
 
   return x_rotation, y_rotation, z_rotation
+
 
 if __name__ == '__main__':
   # Set up the figure and 3D axis
@@ -96,7 +101,7 @@ if __name__ == '__main__':
   ani = FuncAnimation(fig, update, frames=np.linspace(0, lcm_full_rotation_time, 500), blit=False, interval=20)
 
   # Save the animation as a GIF
-  #ani.save('satellite_tumble.gif', writer='pillow', fps=50)
+  # ani.save('satellite_tumble.gif', writer='pillow', fps=50)
 
   # Show the plot
   plt.show()
