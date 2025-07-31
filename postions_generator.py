@@ -19,7 +19,7 @@ def get_default_start_date(year):
   return f'01-01-{year} 00:00:00.000000'
 
 
-def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str]:
+def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]:
   """
   Parse command line arguments.
 
@@ -81,8 +81,18 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str]:
       default='debug',
       help='Mode of operation'
   )
+  
+  parser.add_argument(
+      '--degrees', '-d',
+      type=int,
+      default=1,
+      help='Rotation in degrees for each axis (-d, d)'
+  )
 
   args = parser.parse_args()
+  
+  if args.degrees < 1:
+    raise ValueError('Degrees has to be greater than 0')
 
   # Use the default start date if none provided
   if args.year is None:
@@ -90,7 +100,7 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str]:
   else:
     starting_date = datetime.strptime(get_default_start_date(args.year), DATE_FORMAT).replace(tzinfo=UTC)
 
-  return args.frames, starting_date, args.step, args.output, args.num_bursts, args.image_width, args.image_height, args.mode
+  return args.frames, starting_date, args.step, args.output, args.num_bursts, args.image_width, args.image_height, args.mode, args.degrees
 
 
 def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
@@ -164,7 +174,7 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
 
 
 if __name__ == '__main__':
-  frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode = parse_arguments()
+  frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode, degrees = parse_arguments()
 
   positions = {
       'mode': mode,
@@ -206,7 +216,7 @@ if __name__ == '__main__':
     for j in range(num_bursts):
       # Calculate sarting orientation and tubmble
       starting_orientation = [uniform(0.0, 360.0) for _ in range(3)]
-      tumble = [uniform(0.0, 1.0) for _ in range(3)]  # in degrees per second
+      tumble = [uniform(-degrees, degrees) for _ in range(3)]  # in degrees per second
 
       # Generate positions for each burst point
       for k in range(frames):
