@@ -7,7 +7,7 @@ from typing import List, Tuple
 
 import ephem
 
-from info_extractor import (jday, sat_pos_and_vel, search_tle_by_date,
+from scripts.info_extractor import (jday, sat_pos_and_vel, search_tle_by_date,
                             sun_pos_from_sc)
 
 # Constants
