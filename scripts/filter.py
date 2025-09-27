@@ -1,222 +1,126 @@
 import argparse
 import os
 import shutil
-from typing import List, Tuple, TypeAlias
+from dataclasses import dataclass
+from pathlib import Path
+from typing import List, Tuple
 
 import numpy as np
-from numpy.typing import NDArray
 from PIL import Image
 
-FileMetadata: TypeAlias = Tuple[
-    str,  # sat_name
-    str,  # sat_index
-    str,  # num_bursts
-    str,  # burst_index
-    str,  # elapsed_time
-    str,  # sat_position (3D)
-    str,  # sat_rotation (4D quaternion)
-]
+
+@dataclass
+class FileMetadata:
+  sat_name: str
+  sat_index: str
+  num_bursts: str
+  burst_index: str
+  elapsed_time: str
+  sat_position: str
+  sat_rotation: str
 
 
-def extract_data_from_filename(filename: str) -> FileMetadata:
+def extract_metadata_from_filename(filename: str) -> FileMetadata:
   """
-  Extract timestamp, satellite position, and rotation from filename.
-
-  Args:
-    filename: Name of the image file
-
-  Returns:
-    Tuple containing:
-      - name: Satellite name
-      - i: Satellite index
-      - j: Number of bursts
-      - k: Burst index
-      - elapsed_time: Time elapsed
-      - sat_pos: Numpy array of satellite position
-      - sat_rot: Numpy array of satellite rotation (quaternion)
+  Extract metadata fields from a filename into a FileMetadata object.
+  Expected format:
+    name_index_numBursts_burstIndex_elapsedTime_position_rotation.jpg
   """
-  # Extract the relevant parts of the filename
-  # filePath =
-  # $"{screenshotFolder}/{sat.name}_{sat.index}_{sat.numBurst}_{sat.burstIndex}_{sat.time}_{satPos}_{satRot}.jpg";
-  file_name_parts: List[str] = filename.split('_')
+  file_name_parts: List[str] = Path(filename).stem.split('_')
 
-  name: str = file_name_parts[0]  # satellite name
-  i: str = file_name_parts[1]
-  j: str = file_name_parts[2]
-  k: str = file_name_parts[3]
-  elapsed_time: str = file_name_parts[4]
-  sat_pos: str = file_name_parts[5]
-  sat_rot: str = file_name_parts[6]
+  if len(file_name_parts) < 7:
+    print(filename)
+    raise ValueError(f'Unexpected filename format: {filename}')
 
-  # TODO: normalize elapsed_time [0, 1)
-  return name, i, j, k, elapsed_time, sat_pos, sat_rot
+  return FileMetadata(
+      sat_name=file_name_parts[0],
+      sat_index=file_name_parts[1],
+      num_bursts=file_name_parts[2],
+      burst_index=file_name_parts[3],
+      elapsed_time=file_name_parts[4],
+      sat_position=file_name_parts[5],
+      sat_rotation=file_name_parts[6],
+  )
 
 
 def validate(data: List[FileMetadata]) -> bool:
   """
   Validate that all files in a sequence belong to the same position and burst.
-
-  Args:
-    data: List of extracted file data tuples
-
-  Returns:
-    True if validation passes, False otherwise
   """
-  for i in range(len(data) - 1):
-    if data[i][1] != data[i + 1][1]:
-      return False  # Make sure images are in the same position
-    if data[i][2] != data[i + 1][2]:
-      return False  # Make sure images are in the same burst
-  return True
+  if not data:
+    return False
+  sat_index = data[0].sat_index
+  num_bursts = data[0].num_bursts
+  return all(d.sat_index == sat_index and d.num_bursts == num_bursts for d in data)
 
 
 def is_image_empty(image_path: str, threshold: float = 0.95, darkness_threshold: int = 10) -> bool:
   """
-  Check if an image is mostly black (empty)
-
-  Args:
-    image_path (str): Path to the image file
-    threshold (float): Threshold for determining if image is empty
-    darkness_threshold (int): Pixel value below which a pixel is considered black
-
-  Returns:
-    bool: True if image is mostly black, False otherwise
+  Check if an image is mostly black (empty).
   """
   try:
-    # Open the image
-    img: Image.Image = Image.open(image_path)
+    with Image.open(image_path) as img:
+      img_gray: Image.Image = img.convert('L')
+      img_array: np.ndarray = np.array(img_gray)
 
-    # Convert image to grayscale
-    img_gray: Image.Image = img.convert('L')
-
-    # Convert to numpy array
-    img_array: np.ndarray = np.array(img_gray)
-
-    # Calculate the percentage of dark pixels
-    dark_pixels: int = int(np.sum(img_array < darkness_threshold))
-    total_pixels: int = int(img_array.size)
-
-    dark_ratio: float = dark_pixels / total_pixels
-
+    dark_ratio: float = np.mean(img_array < darkness_threshold)
     return dark_ratio > threshold
-
   except Exception as e:
-    print(f'Error processing {image_path}: {str(e)}')
+    print(f'Error processing {image_path}: {e}')
     return False
 
 
-def delete_empty_images(folder_path: str, threshold: float, delete: bool,
-                        frames: int, valid_extensions: tuple[str, ...]) -> None:
-  """
-  Check all images in a folder and delete empty (mostly black) images
-
-  Args:
-    folder_path (str): Path to the folder containing images
-    threshold (float): Threshold for determining if image is empty
-    delete (bool): Whether to delete the images
-    frames (int): Number of frames per burst
-  """
-
-  files: list[str] = [f for f in os.listdir(folder_path) if f.startswith('cubesat')]
-  files.sort()  # The order of files is important
-
-  # Iterate through all files in the folder
-  for i in range(0, len(files), frames):
-    are_empty: bool = True
-    images: list[str] = []
-
-    files_data: List[FileMetadata] = []
-    for j in range(frames):
-      files_data.append(extract_data_from_filename(files[i + j]))
-
-    if not validate(files_data):
-      continue
-
-    for j in range(frames):
-      if files[i + j].lower().endswith(valid_extensions):
-        file_path: str = os.path.join(folder_path, files[i + j])
-        are_empty = are_empty and is_image_empty(file_path, threshold)
-        images.append(file_path)
-
-    # TODO: make sure all the images belong to the same burst before deleting.
-    if delete and are_empty:
-      for j in range(frames):
-        try:
-          if delete:
-            os.remove(images[j])
-        except Exception as e:
-          print(f'Error deleting {images[j]}: {str(e)}')
+def is_burst_empty(images: List[Path], threshold: float) -> bool:
+  """Check if all images in a burst are empty (mostly black)."""
+  return all(is_image_empty(str(img), threshold) for img in images)
 
 
-def merge_folders(subfolders: list[str], valid_extensions: tuple[str, ...],
-                  frames: int, output_folder: str = 'merged') -> None:
+def merge_folders(subfolders: List[Path], frames: int, valid_extensions: Tuple[str, ...],
+                  output_folder: Path = Path('merged')) -> None:
   """
   Merge subfolders into a single folder with renumbered prefixes.
-
-  Args:
-      subfolders (list[str]): List of subfolder paths
-      output_folder (str): Destination folder for merged images
   """
-  os.makedirs(output_folder, exist_ok=True)
+  output_folder.mkdir(exist_ok=True)
 
   count = 0
   for folder in subfolders:
-    files: list[str] = [f for f in os.listdir(folder) if f.startswith('cubesat')]
-    files.sort()  # The order of files is important
+    files = sorted([f for f in folder.iterdir() if f.name.startswith('cubesat')])
+
+    if not files:
+      print(f'Skipping empty folder: {folder}')
+      continue
 
     for i in range(0, len(files), frames):
-      files_data: List[FileMetadata] = []
-      for j in range(frames):
-        files_data.append(extract_data_from_filename(files[i + j]))
+      burst_files = files[i:i + frames]
+      files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
+      images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
 
-      if not validate(files_data):
+      if not validate(files_metadata) or is_burst_empty(images, threshold):
         continue
 
-      for j in range(frames):
-        parts = [
-            files_data[j][0],
-            str(count),
-            files_data[j][-3],
-            files_data[j][-2],
-            files_data[j][-1],
-        ]
-
-        new_name = '_'.join(parts) + '.jpg'
-        src = os.path.join(folder, files[i + j])
-        dst = os.path.join(output_folder, new_name)
-
-        # Copy file into merged folder
+      for j, src in enumerate(burst_files):
+        metadata = files_metadata[j]
+        new_name = f'{metadata.sat_name}_{count}_{metadata.elapsed_time}_{metadata.sat_position}_{metadata.sat_rotation}{src.suffix}'
+        dst = output_folder / new_name
         shutil.copyfile(src, dst)
 
       count += 1
 
-  return
-
 
 def parse_arguments() -> argparse.Namespace:
   """
-  Parse command line arguments
-
-  Returns:
-      argparse.Namespace: Parsed command line arguments
+  Parse command line arguments.
   """
   parser: argparse.ArgumentParser = argparse.ArgumentParser(
       description='Delete empty (mostly black) images from a folder'
   )
 
   parser.add_argument('--path', type=str, required=True, help='Path to the folder containing images')
-
-  parser.add_argument(
-      '--threshold', type=float, default=0.95, help='Threshold for determining if an image is empty (0.0 to 1.0)'
-  )
-
+  parser.add_argument('--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
   parser.add_argument('--frames', type=int, default=3, help='Number of frames per burst')
-
-  parser.add_argument('--delete', action='store_true', default=True, help='Delete images below the threshold')
 
   args: argparse.Namespace = parser.parse_args()
 
-  # Validate threshold
   if not 0 <= args.threshold <= 1:
     parser.error('Threshold must be between 0.0 and 1.0')
 
@@ -225,18 +129,15 @@ def parse_arguments() -> argparse.Namespace:
 
 if __name__ == '__main__':
   args = parse_arguments()
-  folder_path, threshold, delete, frames = args.path, args.threshold, args.delete, args.frames
 
-  # Supported image extensions
-  valid_extensions: tuple[str, ...] = ('.jpg',)
+  folder_path: Path = Path(args.path)
+  threshold, frames = args.threshold, args.frames
 
-  # Check if folder exists
+  valid_extensions: Tuple[str, ...] = ('.jpg',)
+
   if not os.path.exists(folder_path):
     raise FileNotFoundError(f'Error: Folder {folder_path} does not exist!')
 
-  subfolders = [f.path for f in os.scandir(folder_path) if f.is_dir()]
+  subfolders: List[Path] = [f for f in folder_path.iterdir() if f.is_dir()]
 
-  for sfolder in subfolders:
-    delete_empty_images(sfolder, threshold, delete, frames, valid_extensions)
-
-  merge_folders(subfolders, valid_extensions, frames, output_folder=os.path.join(folder_path, 'merged'))
+  merge_folders(subfolders, frames, valid_extensions, output_folder=folder_path / 'merged')
