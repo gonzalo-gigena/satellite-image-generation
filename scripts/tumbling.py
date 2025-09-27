@@ -66,7 +66,7 @@ if __name__ == '__main__':
   # Convert back to the original scale
   lcm_full_rotation_time = lcm_scaled_full_rotation_time / scale_factor
 
-  print("LCM of full rotation times:", lcm_full_rotation_time)
+  print('LCM of full rotation times:', lcm_full_rotation_time)
   # Initialize the arrow
   arrow = None
 

@@ -29,9 +29,9 @@ def search_tle_by_date(jd, year):
   jd_year_start = jday(year, 1, 1, 0, 0, 0)
   epoch_day = jd - jd_year_start
 
-  current_epoch_tle = float(f"{year % 100}{round(epoch_day, 8)}")
+  current_epoch_tle = float(f'{year % 100}{round(epoch_day, 8)}')
 
-  file_tle = open("LTE.txt", 'r').read()
+  file_tle = open('LTE.txt', 'r').read()
   epoch_day_tle = [float(line[17:33]) for line in file_tle.split('\n')[:-1] if line[0] == '1']
 
   idx = np.argmin(np.abs(current_epoch_tle - np.array(epoch_day_tle)))

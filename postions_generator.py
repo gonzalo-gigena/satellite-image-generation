@@ -8,7 +8,7 @@ from typing import List, Tuple
 import ephem
 
 from scripts.info_extractor import (jday, sat_pos_and_vel, search_tle_by_date,
-                            sun_pos_from_sc)
+                                    sun_pos_from_sc)
 
 # Constants
 DATE_FORMAT = '%d-%m-%Y %H:%M:%S.%f'
@@ -81,7 +81,7 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]
       default='debug',
       help='Mode of operation'
   )
-  
+
   parser.add_argument(
       '--degrees', '-d',
       type=int,
@@ -90,7 +90,7 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]
   )
 
   args = parser.parse_args()
-  
+
   if args.degrees < 1:
     raise ValueError('Degrees has to be greater than 0')
 
