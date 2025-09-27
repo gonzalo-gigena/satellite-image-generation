@@ -54,29 +54,35 @@ def validate(data: List[FileMetadata]) -> bool:
   return all(d.sat_index == sat_index and d.num_bursts == num_bursts for d in data)
 
 
-def is_image_empty(image_path: str, threshold: float = 0.95, darkness_threshold: int = 10) -> bool:
+def is_image_empty(
+        image_path: str,
+        threshold: float = 0.95,
+        min_bright_ratio: float = 0.2,
+        darkness_threshold: int = 10) -> bool:
   """
-  Check if an image is mostly black (empty).
+  Check if an image is mostly black (empty), while allowing small bright areas to count as non-empty.
   """
   try:
     with Image.open(image_path) as img:
-      img_gray: Image.Image = img.convert('L')
-      img_array: np.ndarray = np.array(img_gray)
+      img_gray = img.convert('L')
+      img_array = np.array(img_gray)
 
-    dark_ratio: float = np.mean(img_array < darkness_threshold)
-    return dark_ratio > threshold
+    dark_ratio = np.mean(img_array < darkness_threshold)
+    bright_ratio = np.mean(img_array > 200)  # pixels that are pretty bright
+
+    return dark_ratio > threshold and bright_ratio < min_bright_ratio
   except Exception as e:
     print(f'Error processing {image_path}: {e}')
     return False
 
 
-def is_burst_empty(images: List[Path], threshold: float) -> bool:
+def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float) -> bool:
   """Check if all images in a burst are empty (mostly black)."""
-  return all(is_image_empty(str(img), threshold) for img in images)
+  return all(is_image_empty(str(img), threshold, min_bright_ratio) for img in images)
 
 
-def merge_folders(subfolders: List[Path], frames: int, valid_extensions: Tuple[str, ...],
-                  output_folder: Path = Path('merged')) -> None:
+def merge_folders(subfolders: List[Path], frames: int, threshold: float, bright_ratio: float,
+                  valid_extensions: Tuple[str, ...], output_folder: Path = Path('merged')) -> None:
   """
   Merge subfolders into a single folder with renumbered prefixes.
   """
@@ -95,7 +101,7 @@ def merge_folders(subfolders: List[Path], frames: int, valid_extensions: Tuple[s
       files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
       images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
 
-      if not validate(files_metadata) or is_burst_empty(images, threshold):
+      if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio):
         continue
 
       for j, src in enumerate(burst_files):
@@ -117,6 +123,7 @@ def parse_arguments() -> argparse.Namespace:
 
   parser.add_argument('--path', type=str, required=True, help='Path to the folder containing images')
   parser.add_argument('--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
+  parser.add_argument('--bright_ratio', type=float, default=0.95, help='Bright ratio (0.0 to 1.0)')
   parser.add_argument('--frames', type=int, default=3, help='Number of frames per burst')
 
   args: argparse.Namespace = parser.parse_args()
@@ -131,7 +138,7 @@ if __name__ == '__main__':
   args = parse_arguments()
 
   folder_path: Path = Path(args.path)
-  threshold, frames = args.threshold, args.frames
+  threshold, frames, bright_ratio = args.threshold, args.frames, args.bright_ratio
 
   valid_extensions: Tuple[str, ...] = ('.jpg',)
 
@@ -140,4 +147,4 @@ if __name__ == '__main__':
 
   subfolders: List[Path] = [f for f in folder_path.iterdir() if f.is_dir()]
 
-  merge_folders(subfolders, frames, valid_extensions, output_folder=folder_path / 'merged')
+  merge_folders(subfolders, frames, threshold, bright_ratio, valid_extensions, output_folder=folder_path / 'merged')
