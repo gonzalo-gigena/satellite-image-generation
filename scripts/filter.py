@@ -1,5 +1,6 @@
 import argparse
 import os
+import re
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -112,6 +113,16 @@ def merge_folders(subfolders: List[Path], frames: int, threshold: float, bright_
 
       count += 1
 
+def get_subfolders(folder: Path, ih: int, iw: int, frames: int) -> List[Path]:
+  subfolders = []
+
+  # Regex: ^ih_iw_frames_timestamp
+  pattern = re.compile(rf"^{ih}_{iw}_{frames}_(\d+(\.\d+)?)$")
+  for f in folder.iterdir():
+    if f.is_dir() and pattern.match(f.name):
+      subfolders.append(f)
+  
+  return subfolders
 
 def parse_arguments() -> argparse.Namespace:
   """
@@ -125,6 +136,8 @@ def parse_arguments() -> argparse.Namespace:
   parser.add_argument('--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
   parser.add_argument('--bright_ratio', type=float, default=0.95, help='Bright ratio (0.0 to 1.0)')
   parser.add_argument('--frames', type=int, default=3, help='Number of frames per burst')
+  parser.add_argument('-ih', '--image_height', type=int, default=102, help='Image height')
+  parser.add_argument('-iw', '--image_width', type=int, default=102, help='Image width')
 
   args: argparse.Namespace = parser.parse_args()
 
@@ -133,18 +146,19 @@ def parse_arguments() -> argparse.Namespace:
 
   return args
 
-
 if __name__ == '__main__':
   args = parse_arguments()
 
   folder_path: Path = Path(args.path)
-  threshold, frames, bright_ratio = args.threshold, args.frames, args.bright_ratio
+  threshold, frames, bright_ratio, image_height, image_width = args.threshold, args.frames, args.bright_ratio, args.image_height, args.image_width
 
   valid_extensions: Tuple[str, ...] = ('.jpg',)
 
   if not os.path.exists(folder_path):
     raise FileNotFoundError(f'Error: Folder {folder_path} does not exist!')
 
-  subfolders: List[Path] = [f for f in folder_path.iterdir() if f.is_dir()]
+  subfolders: List[Path] = get_subfolders(folder_path, image_height, image_width, frames)
+  
+  output_folder = f'{image_height}_{image_width}_{frames}_merged'
 
-  merge_folders(subfolders, frames, threshold, bright_ratio, valid_extensions, output_folder=folder_path / 'merged')
+  merge_folders(subfolders, frames, threshold, bright_ratio, valid_extensions, output_folder=folder_path / output_folder)
