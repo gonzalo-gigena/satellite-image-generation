@@ -32,7 +32,8 @@ public class UpdatePosition : MonoBehaviour
         satelliteCameraScript = satelliteCamera.GetComponent<SatelliteCamera>();
         int image_height = positions.image_height;
         int image_width = positions.image_width;
-        satelliteCameraScript.SetReferences(sat, image_height, image_width);
+        string ofolder = positions.output_folder;
+        satelliteCameraScript.SetReferences(sat, image_height, image_width, ofolder);
 
 
         string mode = positions.mode;

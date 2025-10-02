@@ -4,6 +4,7 @@ using Newtonsoft.Json;
 
 public class Positions
 {
+    public string output_folder { get; set; }
     public string mode { get; set; }
     public int image_height { get; set; }
     public int image_width { get; set; }
