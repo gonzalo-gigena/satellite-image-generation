@@ -176,9 +176,9 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
 
 if __name__ == '__main__':
   frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode, degrees = parse_arguments()
-  
+
   output_folder = output_folder = f'{image_height}_{image_width}_{frames}_{time.time()}'
-  
+
   positions = {
       'output_folder': output_folder,
       'mode': mode,

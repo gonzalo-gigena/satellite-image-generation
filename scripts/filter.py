@@ -113,6 +113,7 @@ def merge_folders(subfolders: List[Path], frames: int, threshold: float, bright_
 
       count += 1
 
+
 def get_subfolders(folder: Path, ih: int, iw: int, frames: int) -> List[Path]:
   subfolders = []
 
@@ -121,8 +122,9 @@ def get_subfolders(folder: Path, ih: int, iw: int, frames: int) -> List[Path]:
   for f in folder.iterdir():
     if f.is_dir() and pattern.match(f.name):
       subfolders.append(f)
-  
+
   return subfolders
+
 
 def parse_arguments() -> argparse.Namespace:
   """
@@ -146,6 +148,7 @@ def parse_arguments() -> argparse.Namespace:
 
   return args
 
+
 if __name__ == '__main__':
   args = parse_arguments()
 
@@ -158,7 +161,14 @@ if __name__ == '__main__':
     raise FileNotFoundError(f'Error: Folder {folder_path} does not exist!')
 
   subfolders: List[Path] = get_subfolders(folder_path, image_height, image_width, frames)
-  
+
   output_folder = f'{image_height}_{image_width}_{frames}_merged'
 
-  merge_folders(subfolders, frames, threshold, bright_ratio, valid_extensions, output_folder=folder_path / output_folder)
+  merge_folders(
+      subfolders,
+      frames,
+      threshold,
+      bright_ratio,
+      valid_extensions,
+      output_folder=folder_path /
+      output_folder)
