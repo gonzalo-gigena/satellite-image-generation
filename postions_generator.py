@@ -196,19 +196,19 @@ if __name__ == '__main__':
       }]
   }
 
-  # Set the end date to the end of the year
-  end_date = datetime(starting_date.year + 1, 1, 1, tzinfo=UTC) - timedelta(seconds=1)
+  end_year = datetime(starting_date.year + 1, 1, 1, tzinfo=UTC) - timedelta(seconds=1)
+  start_year = datetime(starting_date.year, 1, 1, tzinfo=UTC)
 
   # Initialize counters
   i = 0
   # Main simulation loop
   current_date = starting_date
-  while current_date <= end_date:
+  while current_date <= end_year:
     # Generate position data
     sun_pos, subsolar_point, sat_pos = generate_position(current_date)
 
     # Calculate time elapsed for rotation
-    time_elapsed = (current_date - starting_date).total_seconds()
+    time_elapsed = (current_date - start_year).total_seconds()
 
     # Update data structure
     positions['time_elapsed'].append(time_elapsed)
