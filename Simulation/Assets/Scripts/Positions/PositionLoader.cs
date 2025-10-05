@@ -6,8 +6,6 @@ public class Positions
 {
     public string output_folder { get; set; }
     public string mode { get; set; }
-    public int image_height { get; set; }
-    public int image_width { get; set; }
     public int total { get; set; }
     public List<double> time_elapsed { get; set; }
     public List<List<double>> subsolar_points { get; set; } // latitude and longitude

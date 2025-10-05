@@ -30,10 +30,8 @@ public class UpdatePosition : MonoBehaviour
         // Pass reference to satellite camera
         GameObject satelliteCamera = GameObject.Find("SatelliteCamera");
         satelliteCameraScript = satelliteCamera.GetComponent<SatelliteCamera>();
-        int image_height = positions.image_height;
-        int image_width = positions.image_width;
         string ofolder = positions.output_folder;
-        satelliteCameraScript.SetReferences(sat, image_height, image_width, ofolder);
+        satelliteCameraScript.SetReferences(sat, ofolder);
 
 
         string mode = positions.mode;
@@ -69,7 +67,18 @@ public class UpdatePosition : MonoBehaviour
                 }
             }
         }
-        Debug.Log("Screenshot capture complete.");
+
+        StopGame();
+    }
+
+
+    void StopGame()
+    {
+    #if UNITY_EDITOR
+        UnityEditor.EditorApplication.isPlaying = false; // stops play mode in Editor
+    #else
+        Application.Quit(); // quits the built game
+    #endif
     }
 
     void Update()

@@ -1,7 +1,6 @@
 import argparse
 import os
 import re
-import shutil
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
@@ -59,6 +58,7 @@ def is_image_empty(
         image_path: str,
         threshold: float = 0.95,
         min_bright_ratio: float = 0.2,
+        resize_to: Tuple[int, int] | None = None,
         darkness_threshold: int = 10) -> bool:
   """
   Check if an image is mostly black (empty), while allowing small bright areas to count as non-empty.
@@ -66,6 +66,7 @@ def is_image_empty(
   try:
     with Image.open(image_path) as img:
       img_gray = img.convert('L')
+      img_gray = img_gray.resize(resize_to, Image.Resampling.LANCZOS)
       img_array = np.array(img_gray)
 
     dark_ratio = np.mean(img_array < darkness_threshold)
@@ -77,13 +78,22 @@ def is_image_empty(
     return False
 
 
-def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float) -> bool:
+def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float,
+                   resize_to: Tuple[int, int] | None = None) -> bool:
   """Check if all images in a burst are empty (mostly black)."""
-  return all(is_image_empty(str(img), threshold, min_bright_ratio) for img in images)
+  return all(
+      is_image_empty(str(img), threshold, min_bright_ratio, resize_to) for img in images
+  )
 
 
-def merge_folders(subfolders: List[Path], frames: int, threshold: float, bright_ratio: float,
-                  valid_extensions: Tuple[str, ...], output_folder: Path = Path('merged')) -> None:
+def merge_folders(
+        subfolders: List[Path],
+        frames: int,
+        threshold: float,
+        bright_ratio: float,
+        valid_extensions: Tuple[str, ...],
+        output_folder: Path = Path('merged'),
+        resize_to: Tuple[int, int] | None = None) -> None:
   """
   Merge subfolders into a single folder with renumbered prefixes.
   """
@@ -102,23 +112,31 @@ def merge_folders(subfolders: List[Path], frames: int, threshold: float, bright_
       files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
       images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
 
-      if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio):
+      if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio, resize_to):
         continue
 
       for j, src in enumerate(burst_files):
         metadata = files_metadata[j]
-        new_name = f'{metadata.sat_name}_{count}_{metadata.elapsed_time}_{metadata.sat_position}_{metadata.sat_rotation}{src.suffix}'
+        new_name = f'{
+            metadata.sat_name}_{count}_{
+            metadata.elapsed_time}_{
+            metadata.sat_position}_{
+            metadata.sat_rotation}{
+            src.suffix}'
         dst = output_folder / new_name
-        shutil.copyfile(src, dst)
+
+        # Downsample and save
+        with Image.open(src) as img:
+          img = img.resize(resize_to, Image.Resampling.LANCZOS)
+          img.save(dst)
 
       count += 1
 
 
-def get_subfolders(folder: Path, ih: int, iw: int, frames: int) -> List[Path]:
+def get_subfolders(folder: Path, frames: int) -> List[Path]:
   subfolders = []
 
-  # Regex: ^ih_iw_frames_timestamp
-  pattern = re.compile(rf"^{ih}_{iw}_{frames}_(\d+(\.\d+)?)$")
+  pattern = re.compile(rf"^{frames}_[0-9]+\.[0-9]+$")
   for f in folder.iterdir():
     if f.is_dir() and pattern.match(f.name):
       subfolders.append(f)
@@ -134,10 +152,10 @@ def parse_arguments() -> argparse.Namespace:
       description='Delete empty (mostly black) images from a folder'
   )
 
-  parser.add_argument('--path', type=str, required=True, help='Path to the folder containing images')
-  parser.add_argument('--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
-  parser.add_argument('--bright_ratio', type=float, default=0.95, help='Bright ratio (0.0 to 1.0)')
-  parser.add_argument('--frames', type=int, default=3, help='Number of frames per burst')
+  parser.add_argument('-p', '--path', type=str, required=True, help='Path to the folder containing images')
+  parser.add_argument('-t', '--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
+  parser.add_argument('-br', '--bright_ratio', type=float, default=0.95, help='Bright ratio (0.0 to 1.0)')
+  parser.add_argument('-f', '--frames', type=int, default=3, help='Number of frames per burst')
   parser.add_argument('-ih', '--image_height', type=int, default=102, help='Image height')
   parser.add_argument('-iw', '--image_width', type=int, default=102, help='Image width')
 
@@ -153,16 +171,18 @@ if __name__ == '__main__':
   args = parse_arguments()
 
   folder_path: Path = Path(args.path)
-  threshold, frames, bright_ratio, image_height, image_width = args.threshold, args.frames, args.bright_ratio, args.image_height, args.image_width
+  threshold, frames, bright_ratio, image_width, image_height = args.threshold, args.frames, args.bright_ratio, args.image_width, args.image_height
 
   valid_extensions: Tuple[str, ...] = ('.jpg',)
 
   if not os.path.exists(folder_path):
     raise FileNotFoundError(f'Error: Folder {folder_path} does not exist!')
 
-  subfolders: List[Path] = get_subfolders(folder_path, image_height, image_width, frames)
+  subfolders: List[Path] = get_subfolders(folder_path, frames)
 
-  output_folder = f'{image_height}_{image_width}_{frames}_merged'
+  output_folder = f'{image_width}_{image_height}_{frames}_merged'
+
+  resize_to = (image_width, image_height)
 
   merge_folders(
       subfolders,
@@ -170,5 +190,6 @@ if __name__ == '__main__':
       threshold,
       bright_ratio,
       valid_extensions,
-      output_folder=folder_path /
-      output_folder)
+      output_folder=folder_path / output_folder,
+      resize_to=resize_to
+  )

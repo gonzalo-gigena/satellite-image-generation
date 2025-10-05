@@ -20,7 +20,7 @@ def get_default_start_date(year):
   return f'01-01-{year} 00:00:00.000000'
 
 
-def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]:
+def parse_arguments() -> Tuple[int, datetime, int, str, int, str, int]:
   """
   Parse command line arguments.
 
@@ -64,22 +64,10 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]
       help='Output JSON file path'
   )
   parser.add_argument(
-      '--image_width', '-iw',
-      type=int,
-      default=102,
-      help='Width of the image'
-  )
-  parser.add_argument(
-      '--image_height', '-ih',
-      type=int,
-      default=102,
-      help='Height of the image'
-  )
-  parser.add_argument(
       '--mode', '-m',
       type=str,
       choices=['debug', 'generate'],
-      default='debug',
+      default='generate',
       help='Mode of operation'
   )
 
@@ -101,7 +89,7 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, int, int, str, int]
   else:
     starting_date = datetime.strptime(get_default_start_date(args.year), DATE_FORMAT).replace(tzinfo=UTC)
 
-  return args.frames, starting_date, args.step, args.output, args.num_bursts, args.image_width, args.image_height, args.mode, args.degrees
+  return args.frames, starting_date, args.step, args.output, args.num_bursts, args.mode, args.degrees
 
 
 def subsolar_point_at_utc(utc_datetime: datetime) -> Tuple[float, float]:
@@ -175,15 +163,13 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
 
 
 if __name__ == '__main__':
-  frames, starting_date, step, output_path, num_bursts, image_width, image_height, mode, degrees = parse_arguments()
+  frames, starting_date, step, output_path, num_bursts, mode, degrees = parse_arguments()
 
-  output_folder = output_folder = f'{image_height}_{image_width}_{frames}_{time.time()}'
+  output_folder = output_folder = f'{frames}_{time.time()}'
 
   positions = {
       'output_folder': output_folder,
       'mode': mode,
-      'image_width': image_width,
-      'image_height': image_height,
       'time_elapsed': [],
       'subsolar_points': [],
       'sun_pos': [],
