@@ -7,6 +7,7 @@ from typing import List, Tuple
 
 import numpy as np
 from PIL import Image
+from tqdm import tqdm
 
 
 @dataclass
@@ -106,31 +107,36 @@ def merge_folders(
     if not files:
       print(f'Skipping empty folder: {folder}')
       continue
+    print(f'Processing {len(files)} images from {folder}...')
+    num_sequences = len(files) // frames
+    with tqdm(total=num_sequences, desc='Processing sequences', unit='seq') as pbar:
+      for i in range(0, len(files), frames):
+        burst_files = files[i:i + frames]
+        files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
+        images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
 
-    for i in range(0, len(files), frames):
-      burst_files = files[i:i + frames]
-      files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
-      images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
+        if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio, resize_to):
+          pbar.update(1)
+          continue
 
-      if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio, resize_to):
-        continue
+        for j, src in enumerate(burst_files):
+          metadata = files_metadata[j]
+          new_name = (
+              f'{metadata.sat_name}_'
+              f'{count}_'
+              f'{metadata.elapsed_time}_'
+              f'{metadata.sat_position}_'
+              f'{metadata.sat_rotation}'
+              f'{src.suffix}'
+          )
+          dst = output_folder / new_name
 
-      for j, src in enumerate(burst_files):
-        metadata = files_metadata[j]
-        new_name = f'{
-            metadata.sat_name}_{count}_{
-            metadata.elapsed_time}_{
-            metadata.sat_position}_{
-            metadata.sat_rotation}{
-            src.suffix}'
-        dst = output_folder / new_name
-
-        # Downsample and save
-        with Image.open(src) as img:
-          img = img.resize(resize_to, Image.Resampling.LANCZOS)
-          img.save(dst)
-
-      count += 1
+          # Downsample and save
+          with Image.open(src) as img:
+            img = img.resize(resize_to, Image.Resampling.LANCZOS)
+            img.save(dst)
+        pbar.update(1)
+        count += 1
 
 
 def get_subfolders(folder: Path, frames: int) -> List[Path]:
