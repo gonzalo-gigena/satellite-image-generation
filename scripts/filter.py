@@ -72,8 +72,7 @@ def is_image_empty(
 
     dark_ratio = np.mean(img_array < darkness_threshold)
     bright_ratio = np.mean(img_array > 200)  # pixels that are pretty bright
-
-    return dark_ratio > threshold and bright_ratio < min_bright_ratio
+    return dark_ratio > threshold or bright_ratio < min_bright_ratio
   except Exception as e:
     print(f'Error processing {image_path}: {e}')
     return False
@@ -82,7 +81,7 @@ def is_image_empty(
 def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float,
                    resize_to: Tuple[int, int] | None = None) -> bool:
   """Check if all images in a burst are empty (mostly black)."""
-  return all(
+  return any(
       is_image_empty(str(img), threshold, min_bright_ratio, resize_to) for img in images
   )
 
@@ -139,10 +138,10 @@ def merge_folders(
         count += 1
 
 
-def get_subfolders(folder: Path, frames: int) -> List[Path]:
+def get_subfolders(folder: Path, frames: int, degrees: int) -> List[Path]:
   subfolders = []
 
-  pattern = re.compile(rf"^{frames}_[0-9]+\.[0-9]+$")
+  pattern = re.compile(rf"^{frames}_{degrees}_[0-9]+\.[0-9]+$")
   for f in folder.iterdir():
     if f.is_dir() and pattern.match(f.name):
       subfolders.append(f)
@@ -164,6 +163,7 @@ def parse_arguments() -> argparse.Namespace:
   parser.add_argument('-f', '--frames', type=int, default=3, help='Number of frames per burst')
   parser.add_argument('-ih', '--image_height', type=int, default=102, help='Image height')
   parser.add_argument('-iw', '--image_width', type=int, default=102, help='Image width')
+  parser.add_argument('-d', '--degrees', type=int, default=1, help='Degrees rotation')
 
   args: argparse.Namespace = parser.parse_args()
 
@@ -177,7 +177,7 @@ if __name__ == '__main__':
   args = parse_arguments()
 
   folder_path: Path = Path(args.path)
-  threshold, frames, bright_ratio, image_width, image_height = args.threshold, args.frames, args.bright_ratio, args.image_width, args.image_height
+  threshold, frames, bright_ratio, image_width, image_height, degrees = args.threshold, args.frames, args.bright_ratio, args.image_width, args.image_height, args.degrees
 
   valid_extensions: Tuple[str, ...] = ('.jpg',)
 
@@ -186,7 +186,7 @@ if __name__ == '__main__':
 
   subfolders: List[Path] = get_subfolders(folder_path, frames)
 
-  output_folder = f'{image_width}_{image_height}_{frames}_merged'
+  output_folder = f'{image_width}_{image_height}_{frames}_{degrees}_merged'
 
   resize_to = (image_width, image_height)
 

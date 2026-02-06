@@ -1,7 +1,7 @@
 import argparse
 import json
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from random import uniform
 from typing import List, Tuple
@@ -85,9 +85,9 @@ def parse_arguments() -> Tuple[int, datetime, int, str, int, str, int]:
 
   # Use the default start date if none provided
   if args.year is None:
-    starting_date = datetime.strptime(get_default_start_date(2024), DATE_FORMAT).replace(tzinfo=UTC)
+    starting_date = datetime.strptime(get_default_start_date(2024), DATE_FORMAT).replace(tzinfo=timezone.utc)
   else:
-    starting_date = datetime.strptime(get_default_start_date(args.year), DATE_FORMAT).replace(tzinfo=UTC)
+    starting_date = datetime.strptime(get_default_start_date(args.year), DATE_FORMAT).replace(tzinfo=timezone.utc)
 
   return args.frames, starting_date, args.step, args.output, args.num_bursts, args.mode, args.degrees
 
@@ -165,7 +165,7 @@ def satellite_tumble(starting_orientation: List[float], tumble: List[float], tim
 if __name__ == '__main__':
   frames, starting_date, step, output_path, num_bursts, mode, degrees = parse_arguments()
 
-  output_folder = output_folder = f'{frames}_{time.time()}'
+  output_folder = output_folder = f'{frames}_{degrees}_{time.time()}'
 
   positions = {
       'output_folder': output_folder,
@@ -182,8 +182,8 @@ if __name__ == '__main__':
       }]
   }
 
-  end_year = datetime(starting_date.year + 1, 1, 1, tzinfo=UTC) - timedelta(seconds=1)
-  start_year = datetime(starting_date.year, 1, 1, tzinfo=UTC)
+  end_year = datetime(starting_date.year + 1, 1, 1, tzinfo=timezone.utc) - timedelta(seconds=1)
+  start_year = datetime(starting_date.year, 1, 1, tzinfo=timezone.utc)
 
   # Initialize counters
   i = 0
