@@ -184,7 +184,7 @@ if __name__ == '__main__':
   if not os.path.exists(folder_path):
     raise FileNotFoundError(f'Error: Folder {folder_path} does not exist!')
 
-  subfolders: List[Path] = get_subfolders(folder_path, frames)
+  subfolders: List[Path] = get_subfolders(folder_path, frames, degrees)
 
   output_folder = f'{image_width}_{image_height}_{frames}_{degrees}_merged'
 
