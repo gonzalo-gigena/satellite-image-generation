@@ -47,6 +47,8 @@ public class CameraManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
+        // Check if the sun can be seen, if not disable flare.
+        EnableFlareSRP();
         if (Input.GetKeyDown(KeyCode.RightArrow))
         {
             currentCam = (currentCam + 1) % cameras.Count;
@@ -57,8 +59,6 @@ public class CameraManager : MonoBehaviour
             currentCam = (currentCam - 1 + cameras.Count) % cameras.Count;
             NextCamera();
         }
-        // Check if the sun can be seen, if not disable flare.
-        EnableFlareSRP();
     }
 
     void EnableFlareSRP()
