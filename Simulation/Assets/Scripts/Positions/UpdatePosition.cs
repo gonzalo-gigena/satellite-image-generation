@@ -82,6 +82,13 @@ public class UpdatePosition : MonoBehaviour
 
     void Update()
     {
+        // Manual position stepping is debug-only: in generate mode it would
+        // move the scene mid-capture and corrupt the scripted sequence.
+        if (!positions.mode.Equals("debug"))
+        {
+            return;
+        }
+
         // Check if the spacebar is pressed
         if (Input.GetKeyDown(KeyCode.Space))
         {

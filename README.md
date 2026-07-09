@@ -22,6 +22,11 @@ This project consists of two Python scripts, `info_extractor.py` and `positions_
 5. Open Unity and load the project
 6. Press "Play" to generate images (only in 'generate' mode)
 
+### Modes
+
+- **`generate`**: the capture loop runs unattended and quits when done. Manual camera controls are **disabled** in this mode — mouse-look would perturb the scripted rotations, and a stray Enter press would inject an extra frame into a burst and misalign every later burst in the merge step.
+- **`debug`**: no images are written automatically. Space steps to the next position, right-mouse drag looks around, and Enter captures a single screenshot manually.
+
 ## File Naming Convention
 
 The image file names follow this pattern:
@@ -42,6 +47,25 @@ This naming convention includes the following components:
 
 
 This dynamically generated name helps ensure that each screenshot is unique based on the satellite's properties and the current date and time.
+
+## Merging and Filtering (`scripts/filter.py`)
+
+Raw capture folders (named `{frames}_{degrees}_{timestamp}`) are filtered, downsampled, and merged into a single training dataset:
+
+```sh
+python scripts/filter.py -p SyntheticImages -ih 102 -iw 102 -f 3 -d 1
+```
+
+- A whole burst is discarded if **any** of its frames is empty: more than `--threshold` (default `0.95`) dark pixels, or fewer than `--bright_ratio` (default `0.2`) pixels brighter than 200.
+- Kept images are downsampled to `--image_width` × `--image_height` (LANCZOS) and re-saved as JPEG at quality 95 to avoid compounding the capture-time compression.
+- Output lands in `SyntheticImages/{width}_{height}_{frames}_{degrees}_merged`.
+- Files are renamed to a 5-field format:
+
+  ```
+  {sat_name}_{count}_{elapsed_time}_{position}_{rotation}.jpg
+  ```
+
+  where `count` is a **unique counter per burst** (it does *not* identify a trajectory point). All bursts captured at the same trajectory point share the exact same `position` string — this is the field the training repo's loader groups on to keep every view of a scene on one side of its train/val/test split.
 
 ## Tumbling
 
