@@ -31,10 +31,9 @@ public class UpdatePosition : MonoBehaviour
         GameObject satelliteCamera = GameObject.Find("SatelliteCamera");
         satelliteCameraScript = satelliteCamera.GetComponent<SatelliteCamera>();
         string ofolder = positions.output_folder;
-        satelliteCameraScript.SetReferences(sat, ofolder);
-
-
         string mode = positions.mode;
+        satelliteCameraScript.SetReferences(sat, ofolder, mode.Equals("debug"));
+
         if (mode.Equals("debug"))
         {
             NextPosition();

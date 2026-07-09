@@ -80,7 +80,7 @@ def is_image_empty(
 
 def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float,
                    resize_to: Tuple[int, int] | None = None) -> bool:
-  """Check if all images in a burst are empty (mostly black)."""
+  """Check if any image in a burst is empty (mostly black); the whole burst is discarded."""
   return any(
       is_image_empty(str(img), threshold, min_bright_ratio, resize_to) for img in images
   )
@@ -130,10 +130,11 @@ def merge_folders(
           )
           dst = output_folder / new_name
 
-          # Downsample and save
+          # Downsample and save; high JPEG quality avoids compounding the
+          # loss from the capture-time compression in a second pass.
           with Image.open(src) as img:
             img = img.resize(resize_to, Image.Resampling.LANCZOS)
-            img.save(dst)
+            img.save(dst, quality=95)
         pbar.update(1)
         count += 1
 
@@ -159,7 +160,10 @@ def parse_arguments() -> argparse.Namespace:
 
   parser.add_argument('-p', '--path', type=str, required=True, help='Path to the folder containing images')
   parser.add_argument('-t', '--threshold', type=float, default=0.95, help='Threshold (0.0 to 1.0)')
-  parser.add_argument('-br', '--bright_ratio', type=float, default=0.95, help='Bright ratio (0.0 to 1.0)')
+  parser.add_argument(
+      '-br', '--bright_ratio', type=float, default=0.2,
+      help='Minimum ratio of bright pixels (>200) for an image to count as non-empty (0.0 to 1.0)'
+  )
   parser.add_argument('-f', '--frames', type=int, default=3, help='Number of frames per burst')
   parser.add_argument('-ih', '--image_height', type=int, default=102, help='Image height')
   parser.add_argument('-iw', '--image_width', type=int, default=102, help='Image width')

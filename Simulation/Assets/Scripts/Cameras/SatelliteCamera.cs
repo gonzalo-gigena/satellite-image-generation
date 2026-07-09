@@ -8,17 +8,28 @@ public class SatelliteCamera : MonoBehaviour
     Satellite sat;
     string ofolder;
     string screenshotFolder;
+    bool debugMode;
     public float lookSpeed = 10f;  // Speed of looking around
 
     private RenderTexture _renderTexture;
     private Texture2D _screenshotTexture;
 
 
-    public void SetReferences(Satellite satellite, string output_folder)
+    public void SetReferences(Satellite satellite, string output_folder, bool debug)
     {
         sat = satellite;
         ofolder = output_folder;
+        debugMode = debug;
 
+        // Folder setup lives here (not in Start) because Unity does not
+        // guarantee Start() order across scripts: if this camera's Start ran
+        // before UpdatePosition's, ofolder would still be null and screenshots
+        // would land in the SyntheticImages root.
+        screenshotFolder = Path.Combine(Application.dataPath, $"../../SyntheticImages/{ofolder}");
+        if (!Directory.Exists(screenshotFolder))
+        {
+            Directory.CreateDirectory(screenshotFolder);
+        }
     }
 
     // Function to randomize the camera's rotation
@@ -37,12 +48,6 @@ public class SatelliteCamera : MonoBehaviour
         int height = 1280;
         _renderTexture = new RenderTexture(width, height, 24);
         _screenshotTexture = new Texture2D(width, height, TextureFormat.RGB24, false);
-        screenshotFolder = Path.Combine(Application.dataPath, $"../../SyntheticImages/{ofolder}");
-        // Create the screenshot folder if it doesn't exist
-        if (!Directory.Exists(screenshotFolder))
-        {
-            Directory.CreateDirectory(screenshotFolder);
-        }
     }
 
     void LateUpdate()
@@ -53,6 +58,15 @@ public class SatelliteCamera : MonoBehaviour
         {
             transform.position = satBody.transform.position;
         }
+        // Manual controls only in debug mode: during generation, mouse-look
+        // would perturb the scripted rotations and a stray Return press would
+        // add a fourth frame to a burst, misaligning every later burst in the
+        // merge step.
+        if (!debugMode)
+        {
+            return;
+        }
+
         // Camera rotation
         if (Input.GetMouseButton(1)) // Right mouse button
         {
