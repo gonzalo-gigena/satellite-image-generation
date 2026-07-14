@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import List, Tuple
 
-import numpy as np
 from PIL import Image
 from tqdm import tqdm
 
@@ -55,35 +54,56 @@ def validate(data: List[FileMetadata]) -> bool:
   return all(d.sat_index == sat_index and d.num_bursts == num_bursts for d in data)
 
 
+def load_and_resize(image_path: Path, resize_to: Tuple[int, int]) -> Image.Image:
+  """Decode an image and downsample it to resize_to.
+
+  draft() lets the JPEG decoder produce a reduced-resolution image directly
+  (DCT-domain scaling), so the full-size bitmap is never materialized; the
+  final LANCZOS resize only covers the remaining factor. No-op for non-JPEGs.
+  """
+  with Image.open(image_path) as img:
+    img.draft(img.mode, resize_to)
+    return img.resize(resize_to, Image.Resampling.LANCZOS)
+
+
 def is_image_empty(
-        image_path: str,
+        img: Image.Image,
         threshold: float = 0.95,
         min_bright_ratio: float = 0.2,
-        resize_to: Tuple[int, int] | None = None,
         darkness_threshold: int = 10) -> bool:
   """
   Check if an image is mostly black (empty), while allowing small bright areas to count as non-empty.
   """
-  try:
-    with Image.open(image_path) as img:
-      img_gray = img.convert('L')
-      img_gray = img_gray.resize(resize_to, Image.Resampling.LANCZOS)
-      img_array = np.array(img_gray)
-
-    dark_ratio = np.mean(img_array < darkness_threshold)
-    bright_ratio = np.mean(img_array > 200)  # pixels that are pretty bright
-    return dark_ratio > threshold or bright_ratio < min_bright_ratio
-  except Exception as e:
-    print(f'Error processing {image_path}: {e}')
-    return False
+  hist = img.convert('L').histogram()
+  total = img.width * img.height
+  dark_ratio = sum(hist[:darkness_threshold]) / total
+  bright_ratio = sum(hist[201:]) / total  # pixels that are pretty bright
+  return dark_ratio > threshold or bright_ratio < min_bright_ratio
 
 
-def is_burst_empty(images: List[Path], threshold: float, min_bright_ratio: float,
-                   resize_to: Tuple[int, int] | None = None) -> bool:
-  """Check if any image in a burst is empty (mostly black); the whole burst is discarded."""
-  return any(
-      is_image_empty(str(img), threshold, min_bright_ratio, resize_to) for img in images
-  )
+def load_burst_if_valid(
+        images: List[Path],
+        threshold: float,
+        min_bright_ratio: float,
+        resize_to: Tuple[int, int]) -> dict | None:
+  """Decode and resize each burst frame once, checking emptiness as it goes.
+
+  Returns a {path: resized image} dict for the whole burst, or None as soon
+  as any frame is empty (mostly black) or unreadable, so remaining frames
+  are never decoded. The kept images are saved directly by the caller,
+  avoiding a second decode+resize pass.
+  """
+  loaded: dict = {}
+  for path in images:
+    try:
+      img = load_and_resize(path, resize_to)
+    except Exception as e:
+      print(f'Error processing {path}: {e}')
+      return None
+    if is_image_empty(img, threshold, min_bright_ratio):
+      return None
+    loaded[path] = img
+  return loaded
 
 
 def merge_folders(
@@ -114,7 +134,12 @@ def merge_folders(
         files_metadata: List[FileMetadata] = [extract_metadata_from_filename(f.name) for f in burst_files]
         images: List[Path] = [f for f in burst_files if f.suffix.lower() in valid_extensions]
 
-        if not validate(files_metadata) or is_burst_empty(images, threshold, bright_ratio, resize_to):
+        if not validate(files_metadata):
+          pbar.update(1)
+          continue
+
+        loaded = load_burst_if_valid(images, threshold, bright_ratio, resize_to)
+        if loaded is None:
           pbar.update(1)
           continue
 
@@ -130,11 +155,13 @@ def merge_folders(
           )
           dst = output_folder / new_name
 
-          # Downsample and save; high JPEG quality avoids compounding the
-          # loss from the capture-time compression in a second pass.
-          with Image.open(src) as img:
-            img = img.resize(resize_to, Image.Resampling.LANCZOS)
-            img.save(dst, quality=95)
+          # Already decoded and downsampled by load_burst_if_valid; high JPEG
+          # quality avoids compounding the loss from the capture-time
+          # compression in a second pass.
+          img = loaded.get(src)
+          if img is None:  # file skipped by the extension filter
+            img = load_and_resize(src, resize_to)
+          img.save(dst, quality=95)
         pbar.update(1)
         count += 1
 

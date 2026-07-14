@@ -6,6 +6,7 @@ SPEL UChile
 """
 
 from datetime import datetime
+from functools import lru_cache
 
 import numpy as np
 from sgp4.api import WGS84, Satrec
@@ -25,18 +26,26 @@ def jday(year, month, day, hour, minute, seconds):
 # Searches for the TLE (Two-Line Element) data closest to a given date and time.
 
 
+@lru_cache(maxsize=None)
+def _load_tle(path='LTE.txt'):
+  # Parse the TLE file once and reuse it across calls: the lines plus a
+  # precomputed epoch array, so each lookup is just an argmin.
+  with open(path, 'r') as f:
+    lines = f.read().split('\n')
+  epochs = np.array([float(line[17:33]) for line in lines[:-1] if line[0] == '1'])
+  return lines, epochs
+
+
 def search_tle_by_date(jd, year):
   jd_year_start = jday(year, 1, 1, 0, 0, 0)
   epoch_day = jd - jd_year_start
 
   current_epoch_tle = float(f'{year % 100}{round(epoch_day, 8)}')
 
-  file_tle = open('LTE.txt', 'r').read()
-  epoch_day_tle = [float(line[17:33]) for line in file_tle.split('\n')[:-1] if line[0] == '1']
-
-  idx = np.argmin(np.abs(current_epoch_tle - np.array(epoch_day_tle)))
-  line_1 = file_tle.split('\n')[0 + 2 * idx]
-  line_2 = file_tle.split('\n')[0 + 2 * idx + 1]
+  lines, epochs = _load_tle()
+  idx = np.argmin(np.abs(current_epoch_tle - epochs))
+  line_1 = lines[2 * idx]
+  line_2 = lines[2 * idx + 1]
 
   return line_1, line_2
 
