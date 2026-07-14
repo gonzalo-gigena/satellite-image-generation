@@ -56,8 +56,8 @@ Raw capture folders (named `{frames}_{degrees}_{timestamp}`) are filtered, downs
 python scripts/filter.py -p SyntheticImages -ih 102 -iw 102 -f 3 -d 1
 ```
 
-- A whole burst is discarded if **any** of its frames is empty: more than `--threshold` (default `0.95`) dark pixels, or fewer than `--bright_ratio` (default `0.2`) pixels brighter than 200.
-- Kept images are downsampled to `--image_width` × `--image_height` (LANCZOS) and re-saved as JPEG at quality 95 to avoid compounding the capture-time compression.
+- A whole burst is discarded if **any** of its frames is empty — more than `--threshold` (default `0.95`) dark pixels, or fewer than `--bright_ratio` (default `0.2`) pixels brighter than 200 — or if any frame is unreadable (the error is printed and the burst is skipped rather than aborting the run).
+- Each frame is decoded once: it is downsampled to `--image_width` × `--image_height` (JPEG draft mode + LANCZOS) and the emptiness check runs on that same in-memory image, which is then re-saved as JPEG at quality 95 to avoid compounding the capture-time compression.
 - Output lands in `SyntheticImages/{width}_{height}_{frames}_{degrees}_merged`.
 - Files are renamed to a 5-field format:
 
